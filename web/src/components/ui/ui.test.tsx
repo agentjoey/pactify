@@ -4,6 +4,7 @@ import { Button } from "./Button";
 import { Badge } from "./Badge";
 import { Modal } from "./Modal";
 import { Spinner } from "./Spinner";
+import { Segmented } from "./Design";
 
 describe("Button", () => {
   it("renders the outline variant by default", () => {
@@ -55,6 +56,44 @@ describe("Button", () => {
     render(<Button onClick={onClick}>Go</Button>);
     fireEvent.click(screen.getByRole("button"));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Segmented", () => {
+  it("keeps buttons accessible and moves one thumb to the selected option", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <Segmented
+        label="Jobs view"
+        value="lines"
+        options={[["lines", "Lines"], ["list", "List"]]}
+        onChange={onChange}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Jobs view" });
+    const thumb = group.querySelector(".segmented-thumb") as HTMLElement;
+    expect(thumb).toBeTruthy();
+    expect(group.getAttribute("style")).toContain("--segment-index: 0");
+    expect(group.getAttribute("style")).toContain("--segments: 2");
+    expect(screen.getByRole("button", { name: "Lines" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    expect(onChange).toHaveBeenCalledWith("list");
+    rerender(
+      <Segmented
+        label="Jobs view"
+        value="list"
+        options={[["lines", "Lines"], ["list", "List"]]}
+        onChange={onChange}
+      />,
+    );
+    expect(group.getAttribute("style")).toContain("--segment-index: 1");
+    expect(screen.getByRole("button", { name: "List" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 });
 

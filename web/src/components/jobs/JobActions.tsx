@@ -12,7 +12,7 @@ const labels: Record<string, string> = {
   dismiss: "Dismiss",
 };
 const consequences: Record<string, string> = {
-  dismiss: "Dismiss this job? It stays in history but leaves Needs you.",
+  dismiss: "Dismiss this job? It stays in history and moves to Shipped. Any worktree is kept.",
   cancel:
     "This will stop the running job. Its worktree and recorded results will be kept.",
 };
@@ -32,6 +32,7 @@ function WriteJobActions({
   notify: (text: string) => void;
 }) {
   const [action, setAction] = useState("");
+  const [confirmStep, setConfirmStep] = useState(1);
   const [instructions, setInstructions] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -69,6 +70,7 @@ function WriteJobActions({
         notify(`Started ${body.jobId}`);
       } else notify(`${labels[action]} completed`);
       setAction("");
+      setConfirmStep(1);
       setInstructions("");
       onChanged();
     } catch (e) {
@@ -77,6 +79,13 @@ function WriteJobActions({
       setBusy(false);
     }
   }
+  function closeAction() {
+    if (busy) return;
+    setAction("");
+    setConfirmStep(1);
+    setInstructions("");
+  }
+  const secondCancelStep = action === "cancel" && confirmStep === 2;
   return (
     <div className="job-actions" onClick={(e) => e.stopPropagation()}>
       {(job.actions || [])
@@ -86,7 +95,10 @@ function WriteJobActions({
             key={a}
             size="sm"
             variant="ghost"
-            onClick={() => setAction(a)}
+            onClick={() => {
+              setConfirmStep(1);
+              setAction(a);
+            }}
           >
             {labels[a]}
           </Button>
@@ -100,25 +112,34 @@ function WriteJobActions({
                   ? `Resume ${job.title || job.id}`
                   : `${labels[action]} ${job.title || job.id}?`
               }
-              onClose={() => {
-                if (!busy) setAction("");
-              }}
+              onClose={closeAction}
               footer={
                 <>
-                  <Button
-                    variant="primary"
-                    loading={busy}
-                    disabled={action === "resume" && !instructions.trim()}
-                    onClick={() => void execute()}
-                  >
-                    {action === "resume"
-                      ? "Start"
-                      : `Confirm ${labels[action]}`}
-                  </Button>
+                  {action === "cancel" && confirmStep === 1 ? (
+                    <Button
+                      variant="primary"
+                      onClick={() => setConfirmStep(2)}
+                    >
+                      Confirm Cancel
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      loading={busy}
+                      disabled={action === "resume" && !instructions.trim()}
+                      onClick={() => void execute()}
+                    >
+                      {action === "resume"
+                        ? "Start"
+                        : action === "cancel"
+                          ? "Stop job"
+                          : `Confirm ${labels[action]}`}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     disabled={busy}
-                    onClick={() => setAction("")}
+                    onClick={closeAction}
                   >
                     Back
                   </Button>
@@ -135,6 +156,11 @@ function WriteJobActions({
                     onChange={(e) => setInstructions(e.target.value)}
                   />
                 </label>
+              ) : secondCancelStep ? (
+                <p>
+                  Stop this job now? The harness stops immediately and the run
+                  cannot be continued as it is.
+                </p>
               ) : (
                 <p>{consequences[action]}</p>
               )}

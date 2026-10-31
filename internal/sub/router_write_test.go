@@ -3,6 +3,7 @@ package sub
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,6 +47,19 @@ func TestSaveRouterSerializesVersionCheck(t *testing.T) {
 	after, _ := os.ReadFile(s.RouterPath())
 	if string(before) != string(after) {
 		t.Fatal("invalid write changed disk")
+	}
+}
+
+func TestSaveRouterRejectsCrossHarnessFallback(t *testing.T) {
+	home := t.TempDir()
+	s := Store{Root: filepath.Join(home, "jobs")}
+	err := s.SaveRouter(context.Background(), fmt.Sprintf("%x", sha256.Sum256(nil)), []byte(`{"aliases":{"mm":{"harness":"opencode"}},"fallback":{"codex":["@mm","kimi"]}}`))
+	var configErr *RouterConfigError
+	if !errors.As(err, &configErr) || configErr.Field != "fallback.codex[0]" {
+		t.Fatalf("error=%v", err)
+	}
+	if _, statErr := os.Stat(s.RouterPath()); !os.IsNotExist(statErr) {
+		t.Fatal("rejected write created router.json")
 	}
 }
 

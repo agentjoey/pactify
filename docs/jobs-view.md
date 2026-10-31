@@ -10,24 +10,24 @@ Both builds default to **dark**, independently of the OS. Choose **light** or **
 
 | Station | Jobs |
 | --- | --- |
-| 01 Queued | `queued`, even with attention |
-| 02 Running | `running` or `retrying`, even with attention |
-| 03 Needs you | Other statuses with attention |
-| 04 Shipped | Other statuses without attention |
+| 01 Running | `queued`, `running` or `retrying`, even with attention |
+| 02 Needs you | Other statuses with an unacknowledged failure or warnings |
+| 03 In review | Other statuses with a pending worktree, not dismissed: the delegating session has yet to apply or discard it |
+| 04 Shipped | Everything else, including dismissed jobs |
 
 Group production lines by **Project** (repository basename), **Harness**, or **One line**. Each line shows observed harnesses or project counts, its running share and jobs finished today. Belts move only on lines with running jobs. Statistics use actual jobs, timestamps and available actions; there is no inferred capacity or execution stage. Shipped shows the three most recent jobs per line, with **+N more** expanding that line in place. Completion-day totals use the browser's local calendar.
 
-Lines with queued, running/retrying or Needs-you jobs stay active regardless of age. Lines are also active when any creation, start or finish timestamp is less than three days old. Current work sorts before recent completions, with the latest activity first within each group; quiet lines follow in latest-activity order.
+Lines with running, Needs-you or In-review jobs stay active regardless of age. Lines are also active when any creation, start or finish timestamp is less than three days old. Current work sorts before recent completions, with the latest activity first within each group; quiet lines follow in latest-activity order.
 
 The **Active** / **All lines** toolbar choice defaults to Active and is saved in localStorage when available. Active collapses older idle lines under **Quiet lines · N**. Each chip shows the line name and relative age; click it to expand that line in place, or use **Show quiet lines** / **Hide quiet lines** for all of them. All lines shows every line without the quiet section. Any search or filter reveals matching lines regardless of age.
 
-On desktop, the line label rail stays fixed while stations scroll horizontally. Scroll padding reserves its 220px width so Queued remains visible. Below 640px, stations become a full-width horizontal pager, initially on **Running**. Tap a station tile or swipe; highlighted tiles and page dots track the visible station. The board handles empty/filter-empty states, while onboarding, loading, server errors and expired sessions retain explicit guidance.
+On desktop, the line label rail stays fixed while stations scroll horizontally. Scroll padding reserves its 220px width so Running remains visible. Below 640px, stations become a full-width horizontal pager, initially on **Running**. Tap a station tile or swipe; highlighted tiles and page dots track the visible station. The board handles empty/filter-empty states, while onboarding, loading, server errors and expired sessions retain explicit guidance.
 
 Switch to **List** for the existing sectioned cards, completion-day stacks and optional **Compact list** with eight aligned metadata columns. The Lines/List choice is saved in localStorage when available. Project, Harness, Status and search filters remain in the URL and work in both views. In Lines, the view switch, grouping, search and shortcuts share one toolbar; **Filters** reveals the other controls. Phone filters also use this disclosure in List. Search stays visible and `/` focuses it in both views. Search matches title, ID, repository and requested or actual model. Explicit resume/fallback links form chains; matching any run retains the whole chain. Chains use their root title and latest run's status, model, duration and usage. Manual resume links count as rework; automatic retries do not.
 
 Use `/` or **⌘K** to search, **j/k** for next/previous job, **h/l** for previous/next station in Lines, **Enter** for details and **Escape** to close. **?** opens shortcut help. Typing inside inputs does not trigger job navigation.
 
-Open `#/jobs` or `#/jobs/<id>` directly. The drawer preserves filters and shows brief, result, Live, bounded readable logs, file diffs and run timelines. Dashboard actions confirm cancel, resume and dismiss. Worktree apply and discard stay with the delegating session or the CLI, so the dashboard shows a finished job with a pending worktree as Done with a worktree pending marker rather than in Needs you. **Dismiss** is offered for terminal jobs whose only attention is an unacknowledged failure or actionable warnings, with no pending worktree. It keeps the result and job history, acknowledges the job and moves the card out of Needs you. It does not apply, discard or otherwise change a worktree. Needs-you cards in the panel instead offer copyable terminal commands. The panel sends GET requests only and keeps its strict CSP and session handling.
+Open `#/jobs` or `#/jobs/<id>` directly. The drawer preserves filters and shows brief, result, Live, bounded readable logs, file diffs and run timelines. Dashboard actions confirm cancel, resume and dismiss. Worktree apply and discard stay with the delegating session or the CLI, so a finished job with a pending worktree waits in In review. **Dismiss** is offered for terminal jobs with an unacknowledged failure or actionable warnings and for any job with a pending worktree. It keeps the result and job history, acknowledges the job and moves the card to Shipped. It does not apply, discard or otherwise change a worktree, so a pending worktree keeps its marker on the Shipped card. Needs-you cards in the panel instead offer copyable terminal commands. The panel sends GET requests only and keeps its strict CSP and session handling.
 
 ## Dashboard and Settings
 

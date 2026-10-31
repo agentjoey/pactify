@@ -50,7 +50,7 @@ for (const panel of [false, true]) {
         const commands = modal.getByRole("region", {name:width <= 700 ? "Terminal commands" : "Next steps",exact:true});
         await expect(modal.locator(".next-steps")).toHaveCount(1);
         await expect(commands.getByRole("heading")).toBeInViewport();
-        await expect(commands.getByRole("button", {name:/^Copy pactify sub /})).toHaveCount(5);
+        await expect(commands.getByRole("button", {name:/^Copy pactify sub /})).toHaveCount(6);
         const last = commands.getByRole("button", {name:"Copy pactify sub result job-summary",exact:true});
         await last.scrollIntoViewIfNeeded();
         await expectInside(modal, last);

@@ -321,10 +321,28 @@ export function Routing({
     ];
     setRoutes(h, routes);
   }
-  const routeOptions = [
-    ...harnesses,
-    ...(draft?.aliases.map((a) => `@${a.name}`) || []),
-  ];
+  function routeHarness(route: string) {
+    if (!route.startsWith("@")) return route;
+    const name = route.slice(1);
+    return (
+      draft?.aliases.find((a) => a.name === name)?.harness ??
+      snapshot?.config.aliases[name]?.harness
+    );
+  }
+  function routeOptions(h: string) {
+    return [
+      h,
+      ...(draft?.aliases
+        .filter((a) => a.harness === h)
+        .map((a) => `@${a.name}`) || []),
+    ];
+  }
+  function ignoredRoutes(h: string, routes: string[]) {
+    return routes.filter((route) => {
+      const harness = routeHarness(route);
+      return !!harness && harness !== h;
+    });
+  }
   return (
     <details
       className="panel-section panel-routing"
@@ -530,7 +548,10 @@ export function Routing({
                   {harnesses.map((h) => (
                     <div className="routing-chain" key={h}>
                       <h3>{h}</h3>
-                      {(draft.fallback[h] || []).map((route, i, routes) => (
+                      {(draft.fallback[h] || []).map((route, i, routes) => {
+                        const options = routeOptions(h);
+                        const ignored = ignoredRoutes(h, [route]);
+                        return (
                         <div className="routing-route" key={i}>
                           <Field
                             label={`Route ${i + 1}`}
@@ -549,14 +570,19 @@ export function Routing({
                                 )
                               }
                             >
-                              {!routeOptions.includes(route) && (
+                              {!options.includes(route) && (
                                 <option>{route}</option>
                               )}
-                              {routeOptions.map((option, j) => (
+                              {options.map((option, j) => (
                                 <option key={j}>{option}</option>
                               ))}
                             </select>
                           </Field>
+                          {ignored.length > 0 && (
+                            <p className="routing-field-error" role="alert">
+                              Ignored: {route} runs on {routeHarness(route)}. Fallback chains stay on {h}; remove it to save.
+                            </p>
+                          )}
                           <div className="routing-actions">
                             <Button
                               variant="ghost"
@@ -591,13 +617,14 @@ export function Routing({
                             </Button>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                       <Button
                         variant="ghost"
                         size="sm"
                         aria-label={`Add route to ${h}`}
                         onClick={() =>
-                          setRoutes(h, [...(draft.fallback[h] || []), "codex"])
+                          setRoutes(h, [...(draft.fallback[h] || []), routeOptions(h)[0]])
                         }
                       >
                         Add route
@@ -753,12 +780,20 @@ export function Routing({
                   <section>
                     <h2>Fallback chains</h2>
                     {Object.entries(snapshot.config.fallback).map(
-                      ([h, routes]) => (
+                      ([h, routes]) => {
+                        const ignored = ignoredRoutes(h, routes);
+                        return (
                         <div className="routing-read-row" key={h}>
                           <strong>{h}</strong>
                           <span>{routes.join(" → ") || "No routes"}</span>
+                          {ignored.length > 0 && (
+                            <span className="routing-field-error">
+                              Ignored cross-harness routes: {ignored.join(", ")}
+                            </span>
+                          )}
                         </div>
-                      ),
+                        );
+                      },
                     )}
                     {Object.keys(snapshot.config.fallback).length === 0 && (
                       <p className="panel-caption">No fallback chains.</p>

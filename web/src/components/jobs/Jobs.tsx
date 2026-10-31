@@ -396,8 +396,8 @@ export function JobList({
             {[
               ["", "All"],
               ["progress", "In progress"],
-              ["queued", "Queued"],
               ["attention", "Needs attention"],
+              ["review", "In review"],
               ["completed", "Completed"],
               ["failed", "Failed"],
             ].map(([value, label]) => (
@@ -419,8 +419,8 @@ export function JobList({
           {(
             [
               ["progress", "In progress"],
-              ["queued", "Queued"],
               ["attention", "Needs attention"],
+              ["review", "In review"],
             ] as const
           ).map(([key, label]) => {
             const rows = chains.filter((c) => sectionFor(c.latest) === key);

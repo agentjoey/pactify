@@ -14,7 +14,7 @@ const job: Job = {
 };
 afterEach(() => {cleanup(); vi.unstubAllGlobals(); history.replaceState(null,"","/");});
 it("gives compact history eight column cells and retains the full truncated title", () => {
-  render(<JobList jobs={[job]} readOnly />);
+  render(<JobList jobs={[{...job,dismissedAt:"2026-10-20T12:00:00Z"}]} readOnly />);
   fireEvent.click(screen.getByRole("button",{name:"Compact list"}));
   const row = within(screen.getByRole("list",{name:"Completed jobs"})).getByRole("listitem");
   expect([...row.querySelectorAll("[data-column]")].map(cell => cell.getAttribute("data-column")))

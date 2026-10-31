@@ -16,8 +16,7 @@ The following uses placeholder model IDs; replace them with installed models:
     "backup": {"harness": "opencode", "model": "provider/model-b"}
   },
   "fallback": {
-    "codex": ["@primary", "kimi"],
-    "agy": ["@backup"]
+    "opencode": ["@primary", "@backup"]
   },
   "quotaGroups": {
     "shared-models": {
@@ -52,8 +51,13 @@ default effort still applies, and other harnesses are unchanged.
 
 1. An explicit harness or alias is preferred; otherwise codex is preferred.
 2. Each fallback key is a harness and its value is an ordered list of harnesses
-   or aliases. This is its complete chain; other fallback chains are not
-   recursively appended. Duplicate routes are removed.
+   or aliases on that same harness. This is its complete chain; other fallback
+   chains are not recursively appended. Duplicate routes are removed.
+   Cross-harness entries are ignored: older configuration files still load and
+   `pactify sub router` reports each entry as a warning, while the dashboard
+   rejects them on save as `fallback.<harness>[<i>]`. Fallback never changes
+   harness. An explicit `pactify sub run <other-harness> --worktree-from <job>`
+   is a reviewed new session, not fallback, and stays available.
 3. Each route checks remembered exhaustion for harness+model, the whole harness
    and its quota groups. Skip routes with any unexpired constraint. CLI model
    and effort overrides apply only to the preferred route; fallback routes use
@@ -125,10 +129,13 @@ chains, quota groups and exhaustion records. It refreshes every 30 seconds while
 preserving an active draft's original configuration version. Unknown reset times
 remain unknown; local memory expiry is not a provider reset.
 
-Edit adds, removes and reorders routes and group members. Save uses the same
-validation as the CLI: 422 errors appear beside fields, and 409 reports
-`Config changed elsewhere — reload to see the latest`. Reload discards the draft
-and loads the new configuration; Cancel discards edits. Changes affect future jobs.
+Edit adds, removes and reorders routes and group members. Add route offers only
+routes on that chain's harness (the harness itself and its aliases). Existing
+cross-harness entries stay visible with an ignored-route note so they can be
+removed before saving. Save uses the same validation as the CLI: 422 errors appear
+beside fields, and 409 reports `Config changed elsewhere — reload to see the
+latest`. Reload discards the draft and loads the new configuration; Cancel
+discards edits. Changes affect future jobs.
 
 Clear requires inline confirmation and removes only a local quota record; it
 does not reset provider quota. Other exhausted members can still block a group.
@@ -187,7 +194,7 @@ Serve also exposes the following POST endpoints; the panel registers none:
 | `/api/sub/jobs/{id}/resume` | `{brief:"..."}`; starts a background job and returns `{jobId:"..."}` |
 | `/api/sub/jobs/{id}/apply` | Optional `{}`; applies safely to the source workspace, returns `{ok:true}` |
 | `/api/sub/jobs/{id}/discard` | Optional `{}`; removes the worktree, returns `{ok:true}` |
-| `/api/sub/jobs/{id}/dismiss` | Optional `{}`; acknowledges terminal failure/warnings without changing results or worktrees, returns `{ok:true}`; requires unacknowledged attention and no pending worktree |
+| `/api/sub/jobs/{id}/dismiss` | Optional `{}`; acknowledges terminal failure/warnings without changing results or worktrees, returns `{ok:true}`; requires unacknowledged failure or warnings, or a pending worktree, which stays pending |
 
 Host, Origin and configured token checks apply. Bodies must be JSON (charset is
 allowed) and at most 64 KiB: non-JSON is 415, oversized bodies 413, malformed JSON

@@ -201,7 +201,7 @@ for (const width of [1440, 390]) {
     if (width <= 700) await summaryDetail.getByRole("button", {name:"Show commands",exact:true}).click();
     const steps = summaryDetail.getByRole("region", {name:width <= 700 ? "Terminal commands" : "Next steps",exact:true});
     await expect(summaryDetail.locator(".next-steps")).toHaveCount(1);
-    await expect(steps.getByRole("button", {name:/^Copy pactify sub /})).toHaveCount(5);
+    await expect(steps.getByRole("button", {name:/^Copy pactify sub /})).toHaveCount(6);
     await expect(steps.getByText(/Run a command in your terminal/)).toHaveText("Run a command in your terminal. Resume: type instructions, then Ctrl+D.");
     await page.keyboard.press("Escape");
     await expect(summaryDetail).toHaveCount(0);

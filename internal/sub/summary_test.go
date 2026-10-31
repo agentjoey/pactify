@@ -25,14 +25,16 @@ func summaryJSON(t *testing.T, s Store, st State, peers []State) map[string]any 
 
 func TestSummaryTitleWithoutIssueExtraction(t *testing.T) {
 	s := Store{Root: t.TempDir()}
-	for _, brief := range []string{"# Short title\nExample-701 in body", "Background:\nA later line"} {
-		out := summaryJSON(t, s, State{Request: Request{Brief: brief}}, nil)
+	for _, tc := range []struct{ brief, want string }{
+		{"# Short title\nExample-701 in body", "Short title"},
+		{"Background:\nA later line", "A later line"},
+	} {
+		out := summaryJSON(t, s, State{Request: Request{Brief: tc.brief}}, nil)
 		if _, exists := out["issue"]; exists {
 			t.Errorf("issue must not be emitted: %v", out)
 		}
-		want := strings.TrimPrefix(strings.Split(brief, "\n")[0], "# ")
-		if out["title"] != want {
-			t.Errorf("title=%q, want first line %q", out["title"], want)
+		if out["title"] != tc.want {
+			t.Errorf("title=%q, want %q", out["title"], tc.want)
 		}
 	}
 }
@@ -282,11 +284,28 @@ func TestBriefSummaryKeepsIdentifiersAndFirstLine(t *testing.T) {
 	if title != "Example-643：kimi 改用 独立 目录（KIMI_CODE_HOME）" {
 		t.Fatalf("title=%q", title)
 	}
-	if title := briefSummary("Background:\n\nFix the stdin of orchestrate workers.\n"); title != "Background:" {
-		t.Fatalf("first line changed: %q", title)
+	if title := briefSummary("Background:\n\nFix the stdin of orchestrate workers.\n"); title != "Fix the stdin of orchestrate workers." {
+		t.Fatalf("section heading used as title: %q", title)
 	}
-	if title := briefSummary("## 背景\n背景：\n修复 stdin\n"); title != "背景" {
-		t.Fatalf("heading without colon is a real title: %q", title)
+	if title := briefSummary("## 背景\n背景：\n修复 stdin\n"); title != "修复 stdin" {
+		t.Fatalf("section heading used as title: %q", title)
+	}
+}
+
+func TestBriefSummarySkipsSectionHeadings(t *testing.T) {
+	for _, tc := range []struct{ brief, want string }{
+		{"Background:\n\nFix the stdin of orchestrate workers.\n", "Fix the stdin of orchestrate workers."},
+		{"## 背景\n背景：\n修复 stdin\n", "修复 stdin"},
+		{"## Overview\n\nShip the new dashboard.\n", "Ship the new dashboard."},
+		{"**Goal:** Make routing predictable.\n", "Make routing predictable."},
+		{"任务背景：统一回退到同一 harness\n", "统一回退到同一 harness"},
+		{"Background:\nContext:\n", "Background:"},
+		{"## Background ##\n", "Background"},
+		{"task code\nbody", "task code"},
+	} {
+		if got := briefSummary(tc.brief); got != tc.want {
+			t.Errorf("briefSummary(%q)=%q, want %q", tc.brief, got, tc.want)
+		}
 	}
 }
 

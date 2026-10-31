@@ -102,7 +102,7 @@ it("confirms Dismiss, posts once, and refreshes the card out of Needs you", asyn
   const props = { source: { jobsPath: "/api/sub/jobs", costPath: "/cost", fetch: vi.fn(), write }, onChanged: changed };
   const view = render(<JobList jobs={[initial]} {...props} />);
   fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-  expect(screen.getByText("Dismiss this job? It stays in history but leaves Needs you.")).toBeInTheDocument();
+  expect(screen.getByText("Dismiss this job? It stays in history and moves to Shipped. Any worktree is kept.")).toBeInTheDocument();
   expect(write).not.toHaveBeenCalled();
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm Dismiss" }));
   await vi.waitFor(() => expect(changed).toHaveBeenCalledOnce());

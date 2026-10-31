@@ -18,7 +18,7 @@ for (const width of [1440, 375]) {
     await page.getByLabel("Alias 2 name", { exact: true }).fill("mobile-test");
     await page
       .getByLabel("Alias 2 harness", { exact: true })
-      .selectOption("opencode");
+      .selectOption("codex");
     await page
       .getByLabel("Alias 2 model", { exact: true })
       .selectOption(LONG_MODEL);
@@ -65,7 +65,7 @@ for (const width of [1440, 375]) {
     expect((await saved).status()).toBe(200);
     await expect(page.getByText("@mobile-test", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("@fast → @mobile-test → kimi", { exact: true }),
+      page.getByText("@fast → @mobile-test → codex", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("model-one, model-two", { exact: true }),

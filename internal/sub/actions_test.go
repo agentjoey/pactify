@@ -18,7 +18,7 @@ func TestJobActions(t *testing.T) {
 	}
 	finishWorktree(t, s, st.ID, StatusSucceeded)
 	st, _ = s.Load(st.ID)
-	if got := s.Actions(st); !reflect.DeepEqual(got, []string{"resume", "apply", "discard"}) {
+	if got := s.Actions(st); !reflect.DeepEqual(got, []string{"resume", "apply", "discard", "dismiss"}) {
 		t.Fatal(got)
 	}
 	summary := s.Summarize(st, nil, time.Now())
@@ -65,7 +65,7 @@ func TestActionsKeepMissingWorktreeCleanup(t *testing.T) {
 	if err := os.RemoveAll(st.Worktree.Path); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.Actions(st); !reflect.DeepEqual(got, []string{"discard"}) {
+	if got := s.Actions(st); !reflect.DeepEqual(got, []string{"discard", "dismiss"}) {
 		t.Fatal(got)
 	}
 	if err := s.DiscardWorktree(st.ID); err != nil {
@@ -118,7 +118,7 @@ func TestActionsApplyWhenJobRemovedItsCwd(t *testing.T) {
 	}
 	finishWorktree(t, s, st.ID, StatusSucceeded)
 	st, _ = s.Load(st.ID)
-	if got := s.Actions(st); !reflect.DeepEqual(got, []string{"apply", "discard"}) {
+	if got := s.Actions(st); !reflect.DeepEqual(got, []string{"apply", "discard", "dismiss"}) {
 		t.Fatal(got)
 	}
 	if err := s.ApplyWorktree(st.ID); err != nil {

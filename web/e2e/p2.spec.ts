@@ -18,7 +18,7 @@ for (const panel of [true, false]) test.describe(panel ? "panel P2" : "dashboard
       await expect(page.getByRole("region",{name:"Keyboard shortcuts",exact:true})).toHaveCount(0);
       await search.fill(""); await page.keyboard.press("Tab");
       const first=page.getByRole("region",{name:"In progress",exact:true}).getByRole("link");
-      const second=page.getByRole("region",{name:"Queued",exact:true}).getByRole("link").first();
+      const second=page.locator("[data-job-link]").nth(1);
       await page.keyboard.press("j"); await expect(first).toBeFocused();
       expect(await first.evaluate(node => getComputedStyle(node).outlineStyle)).toBe("solid");
       await page.keyboard.press("j"); await expect(second).toBeFocused();

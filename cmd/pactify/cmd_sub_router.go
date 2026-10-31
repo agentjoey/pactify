@@ -44,7 +44,8 @@ func subRouter(c *cobra.Command, jsonOut bool) (int, error) {
 		Config           *sub.Router            `json:"config"`
 		ResolvedFallback map[string][]sub.Route `json:"resolvedFallback"`
 		ExhaustedRoutes  []sub.QuotaRoute       `json:"exhaustedRoutes"`
-	}{filepath.Join(filepath.Dir(store.Root), "router.json"), router, resolved, quotas}
+		Warnings         []string               `json:"warnings"`
+	}{filepath.Join(filepath.Dir(store.Root), "router.json"), router, resolved, quotas, router.IgnoredFallbacks()}
 	if jsonOut {
 		return 0, subJSON(c, out)
 	}
@@ -100,6 +101,14 @@ func formatSubRouter(path string, router *sub.Router, quotas []sub.QuotaRoute, n
 			routes = "(none)"
 		}
 		fmt.Fprintf(&out, "  %s → %s\n", name, routes)
+	}
+	out.WriteString("\nWarnings:\n")
+	warnings := router.IgnoredFallbacks()
+	if len(warnings) == 0 {
+		out.WriteString("  (none)\n")
+	}
+	for _, warning := range warnings {
+		fmt.Fprintf(&out, "  %s\n", warning)
 	}
 	out.WriteString("\nQuota groups:\n")
 	if len(router.QuotaGroups) == 0 {

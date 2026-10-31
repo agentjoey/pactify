@@ -51,7 +51,8 @@ func TestKimiReadonlyReviewStartupClassification(t *testing.T) {
 			store, h, _ := kimiReadonlyReviewFixture(t)
 			st, _ := store.Load("j1")
 			if tc.class == "quota" {
-				st.Routing = &Routing{Remaining: []Route{{Harness: "codex"}}}
+				st.Request.Model = "primary"
+				st.Routing = &Routing{Remaining: []Route{{Harness: "kimi", Model: "fallback"}}}
 				store.Save(st)
 			}
 			ctx, cancel := context.WithCancel(context.Background())

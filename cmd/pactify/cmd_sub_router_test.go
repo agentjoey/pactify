@@ -184,7 +184,7 @@ func TestSubRouterTextAndJSON(t *testing.T) {
 		t.Fatalf("code=%d err=%v", code, err)
 	}
 	text := out.String()
-	for _, want := range []string{"Config path: " + filepath.Join(home, "router.json"), "\nAliases:\n", "@cheap → opencode flash [low]", "@mm → opencode mini", "\nFallback:\n", "agy → @mm", "codex → @mm, kimi", "\nQuota groups:\n", "argon → agy: low, high", "\nExhausted routes:\n", "agy/high", "resets in ", reset.Format(time.RFC3339), "codex", "reset time unknown", "memory expires at"} {
+	for _, want := range []string{"Config path: " + filepath.Join(home, "router.json"), "\nAliases:\n", "@cheap → opencode flash [low]", "@mm → opencode mini", "\nFallback:\n", "agy → @mm", "codex → @mm, kimi", "\nWarnings:\n", "fallback.agy[0]: ignored route @mm", "fallback.codex[0]: ignored route @mm", "fallback.codex[1]: ignored route kimi", "\nQuota groups:\n", "argon → agy: low, high", "\nExhausted routes:\n", "agy/high", "resets in ", reset.Format(time.RFC3339), "codex", "reset time unknown", "memory expires at"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q in:\n%s", want, text)
 		}
@@ -199,11 +199,12 @@ func TestSubRouterTextAndJSON(t *testing.T) {
 		Config           sub.Router             `json:"config"`
 		ResolvedFallback map[string][]sub.Route `json:"resolvedFallback"`
 		ExhaustedRoutes  []sub.QuotaRoute       `json:"exhaustedRoutes"`
+		Warnings         []string               `json:"warnings"`
 	}
 	if code != 0 || err != nil || json.Unmarshal(out.Bytes(), &got) != nil {
 		t.Fatalf("code=%d err=%v output=%s", code, err, out.String())
 	}
-	if got.Path != filepath.Join(home, "router.json") || got.Config.Aliases["cheap"].Effort != "low" || len(got.ResolvedFallback["codex"]) != 2 || len(got.ExhaustedRoutes) != 2 {
+	if got.Path != filepath.Join(home, "router.json") || got.Config.Aliases["cheap"].Effort != "low" || len(got.ResolvedFallback["codex"]) != 0 || len(got.ResolvedFallback["agy"]) != 0 || len(got.ExhaustedRoutes) != 2 || len(got.Warnings) != 3 {
 		t.Fatalf("JSON contract changed: %s", out.String())
 	}
 }

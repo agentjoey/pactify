@@ -119,7 +119,7 @@ it("partitions running, queued, terminal attention and completed independently",
       }),
     ),
   ).toBe("progress");
-  expect(sectionFor(makeJob("a", { status: "queued" }))).toBe("queued");
+  expect(sectionFor(makeJob("a", { status: "queued" }))).toBe("progress");
   expect(
     sectionFor(
       makeJob("a", { attention: [{ kind: "warnings", message: "Review" }] }),
@@ -187,7 +187,13 @@ for (const action of ["cancel", "dismiss"] as const) {
     fireEvent.click(
       within(dialog).getByRole("button", { name: `Confirm ${label}` }),
     );
+    if (action === "cancel") {
+      expect(src.write).not.toHaveBeenCalled();
+      expect(dialog.textContent).toContain("Stop this job now?");
+      fireEvent.click(within(dialog).getByRole("button", { name: "Stop job" }));
+    }
     await act(async () => {});
+    expect(src.write).toHaveBeenCalledTimes(1);
     expect(src.write).toHaveBeenCalledWith(
       `/jobs/a/${action}`,
       expect.objectContaining({ method: "POST" }),
@@ -195,6 +201,48 @@ for (const action of ["cancel", "dismiss"] as const) {
     expect(changed).toHaveBeenCalled();
   });
 }
+it("requires two cancel confirmations, posts once, and restarts after Back", async () => {
+  const src = source();
+  render(
+    <JobActions
+      job={makeJob("a", { actions: ["cancel"] })}
+      source={src}
+      onChanged={vi.fn()}
+      notify={vi.fn()}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  let dialog = screen.getByRole("dialog");
+  expect(dialog.textContent).toContain("This will stop the running job.");
+  fireEvent.click(
+    within(dialog).getByRole("button", { name: "Confirm Cancel" }),
+  );
+  expect(src.write).not.toHaveBeenCalled();
+  expect(
+    within(dialog).queryByRole("button", { name: "Confirm Cancel" }),
+  ).not.toBeInTheDocument();
+  expect(dialog.textContent).toContain(
+    "Stop this job now? The harness stops immediately and the run cannot be continued as it is.",
+  );
+  fireEvent.click(within(dialog).getByRole("button", { name: "Back" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(src.write).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  dialog = screen.getByRole("dialog");
+  expect(
+    within(dialog).getByRole("button", { name: "Confirm Cancel" }),
+  ).toBeInTheDocument();
+  fireEvent.click(
+    within(dialog).getByRole("button", { name: "Confirm Cancel" }),
+  );
+  fireEvent.click(within(dialog).getByRole("button", { name: "Stop job" }));
+  await act(async () => {});
+  expect(src.write).toHaveBeenCalledTimes(1);
+  expect(src.write).toHaveBeenCalledWith(
+    "/jobs/a/cancel",
+    expect.objectContaining({ method: "POST" }),
+  );
+});
 it("leaves worktree apply and discard to the delegating session even when offered", () => {
   render(
     <JobActions
@@ -262,14 +310,17 @@ for (const action of ["cancel", "resume", "dismiss"])
       fireEvent.change(screen.getByLabelText("Instructions for the next run"), {
         target: { value: "retry" },
       });
+    const dialog = screen.getByRole("dialog");
     fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
+      within(dialog).getByRole("button", {
         name:
           action === "resume"
             ? "Start"
             : `Confirm ${action[0].toUpperCase() + action.slice(1)}`,
       }),
     );
+    if (action === "cancel")
+      fireEvent.click(within(dialog).getByRole("button", { name: "Stop job" }));
     await act(async () => {});
     expect(notify).toHaveBeenCalledWith("Worktree conflict");
   });
@@ -349,8 +400,8 @@ it("calculates chain KPIs and fourteen calendar days without dropping separate-r
   ];
   expect(dashboardKpis(rows, now)).toEqual({
     progress: 1,
-    queued: 0,
     attention: 0,
+    review: 0,
     succeeded: 0,
     failed: 0,
   });
@@ -653,8 +704,8 @@ it("uses completion dates for seven calendar day KPIs and zero fills chart days"
   ];
   expect(dashboardKpis(rows, now)).toEqual({
     progress: 0,
-    queued: 0,
     attention: 1,
+    review: 0,
     succeeded: 1,
     failed: 1,
   });

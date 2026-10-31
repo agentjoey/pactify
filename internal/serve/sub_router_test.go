@@ -56,7 +56,7 @@ func TestRouterAPI(t *testing.T) {
 		b, _ := json.Marshal(map[string]any{"version": v, "config": json.RawMessage(c)})
 		return string(b)
 	}
-	config := `{"aliases":{"fast":{"harness":"codex","model":"test","effort":"low"}},"fallback":{"codex":["@fast","kimi"]},"quotaGroups":{"group":{"harness":"agy","models":["one","two"]}}}`
+	config := `{"aliases":{"fast":{"harness":"codex","model":"test","effort":"low"}},"fallback":{"codex":["@fast","codex"]},"quotaGroups":{"group":{"harness":"agy","models":["one","two"]}}}`
 	for _, tc := range []struct {
 		body, ct string
 		code     int
@@ -64,6 +64,7 @@ func TestRouterAPI(t *testing.T) {
 	}{
 		{body(version, `{"aliases":{"fast":{"harness":"bad"}}}`), "application/json", 422, "aliases.fast.harness"},
 		{body(version, `{"fallback":{"codex":["@missing"]}}`), "application/json", 422, "fallback.codex[0]"},
+		{body(version, `{"aliases":{"mm":{"harness":"opencode"}},"fallback":{"codex":["codex","@mm"]}}`), "application/json", 422, "fallback.codex[1]"},
 		{body(version, `{"quotaGroups":{"group":{"harness":"agy","models":[]}}}`), "application/json", 422, "quotaGroups.group.models"},
 		{body(version, `null`), "application/json", 422, "config"},
 		{body(version, config), "text/plain", 415, ""},

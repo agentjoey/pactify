@@ -71,13 +71,16 @@ func (index *SummaryIndex) CheckAction(st State, action string) error {
 		if st.FallbackTo != "" {
 			return actionConflict("job %s was replaced by fallback job %s", st.ID, st.FallbackTo)
 		}
-		if w := st.Worktree; w != nil {
-			if !w.Applied && !w.Discarded {
-				return actionConflict("job %s has a pending worktree; apply or discard it first", st.ID)
-			}
+		if w := st.Worktree; w != nil && (w.Applied || w.Discarded) {
 			return actionConflict("job %s was already acknowledged by applying or discarding its worktree", st.ID)
 		}
-		if st.Status != StatusFailed && actionableWarnings(index.results[st.ID]) == 0 {
+		if w := st.Worktree; w != nil {
+			if err := index.worktreeBusy[w.Owner]; err != nil {
+				return err
+			}
+		}
+		// A pending worktree needs an exit too: its delegating session may be gone.
+		if st.Worktree == nil && st.Status != StatusFailed && actionableWarnings(index.results[st.ID]) == 0 {
 			return actionConflict("job %s has no failure or warnings to dismiss", st.ID)
 		}
 		return nil

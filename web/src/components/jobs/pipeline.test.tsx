@@ -10,9 +10,9 @@ afterEach(() => { cleanup(); localStorage.clear(); history.replaceState(null,"",
 for (const status of ["queued","running","retrying","succeeded","failed","canceled"])
   for (const kind of ["", "worktree_pending", "failed", "quota", "warnings"])
     it(`maps ${status}/${kind || 'none'} to the existing section rule`, () => {
-      // A pending worktree alone is approved in the delegating session, not here.
-      const expected = status === "queued" ? "Queued" : ["running","retrying"].includes(status) ? "Running" : kind && kind !== "worktree_pending" ? "Needs you" : "Shipped";
-      expect(stations.find(s => s.key === stationFor(job("a", {status,attention:kind ? [{kind,message:kind}] : []})))?.name).toBe(expected);
+      const expected = ["queued","running","retrying"].includes(status) ? "Running" : kind && kind !== "worktree_pending" ? "Needs you" : kind ? "In review" : "Shipped";
+      const worktree = kind === "worktree_pending" ? {path:"/wt",baseCommit:"abc",status:"pending"} : undefined;
+      expect(stations.find(s => s.key === stationFor(job("a", {status,worktree,attention:kind ? [{kind,message:kind}] : []})))?.name).toBe(expected);
     });
 it("groups lines by project name, harness and one line", () => {
   const jobs = [job("a",{createdAt:"2026-10-01T00:00:00Z"}), job("b",{repo:"/other/pactify",harness:"kimi",createdAt:"2026-10-02T00:00:00Z"}),job("c",{repo:"/repo/tool",createdAt:"2026-10-03T00:00:00Z"})];
@@ -33,12 +33,12 @@ it("defaults to Lines, expands Shipped in place, and persists List", () => {
 });
 
 it("keeps station shortcuts, job navigation and detail links in Lines", () => {
-  render(<JobList jobs={[job("waiting",{status:"queued"}),job("running",{status:"running"}),job("review",{attention:[{kind:"warnings",message:"Review"}]})]}/>);
-  fireEvent.keyDown(window,{key:"j"});expect(screen.getByRole("link",{name:"waiting"})).toHaveFocus();
-  fireEvent.keyDown(document.activeElement!,{key:"l"});expect(screen.getByRole("link",{name:"running"})).toHaveFocus();
+  render(<JobList jobs={[job("running",{status:"running"}),job("attention",{attention:[{kind:"warnings",message:"Review"}]}),job("review",{worktree:{path:"/wt",baseCommit:"abc",status:"pending"},attention:[{kind:"worktree_pending",message:"Pending"}]})]}/>);
+  fireEvent.keyDown(window,{key:"j"});expect(screen.getByRole("link",{name:"running"})).toHaveFocus();
+  fireEvent.keyDown(document.activeElement!,{key:"l"});expect(screen.getByRole("link",{name:"attention"})).toHaveFocus();
   fireEvent.keyDown(document.activeElement!,{key:"l"});expect(screen.getByRole("link",{name:"review"})).toHaveFocus();
-  fireEvent.keyDown(document.activeElement!,{key:"h"});expect(screen.getByRole("link",{name:"running"})).toHaveFocus();
-  fireEvent.keyDown(document.activeElement!,{key:"Enter"});expect(location.hash).toBe("#/jobs/running");
+  fireEvent.keyDown(document.activeElement!,{key:"h"});expect(screen.getByRole("link",{name:"attention"})).toHaveFocus();
+  fireEvent.keyDown(document.activeElement!,{key:"Enter"});expect(location.hash).toBe("#/jobs/attention");
 });
 it("keeps panel Lines copyable and suppresses writes even with a writable source", () => {
   const write=vi.fn();
@@ -69,4 +69,11 @@ it("discloses line filters without hiding search or breaking their values", () =
   expect(screen.getByRole("link",{name:"kimi-job"})).toBeInTheDocument();
   fireEvent.click(button);
   expect(screen.getByRole("searchbox")).toBeVisible();
+});
+it("moves a dismissed pending worktree from In review to Shipped", () => {
+  const worktree = {path:"/wt",baseCommit:"abc",status:"pending"};
+  const attention = [{kind:"worktree_pending",message:"Pending"}];
+  expect(stationFor(job("a",{status:"failed",worktree,attention}))).toBe("review");
+  expect(stationFor(job("a",{status:"failed",worktree,attention,dismissedAt:"2026-11-01T00:00:00Z"}))).toBe("completed");
+  expect(stationFor(job("a",{status:"failed",worktree,attention:[...attention,{kind:"failed",message:"Failed"}]}))).toBe("attention");
 });

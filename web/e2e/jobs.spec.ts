@@ -31,10 +31,7 @@ for (const width of [1440, 390]) {
     if (width < 640) await page.getByRole("button", {name:"Filters", exact:true}).click();
     await expect(running.locator("article")).toHaveCount(1);
     await expect(running).toContainText("1 rework");
-    const queuedCard = page
-      .getByRole("region", { name: "Queued", exact: true })
-      .locator("article")
-      .first();
+    const queuedCard = running.locator("article").first();
     const titleBox = await queuedCard.locator("h3").boundingBox();
     const metadataBox = await queuedCard
       .locator(".panel-metadata")
@@ -50,7 +47,7 @@ for (const width of [1440, 390]) {
     const today = completed.locator(".completed-day").first();
     await expect(today.getByRole("button", { name: "Show all" })).toBeVisible();
     await today.getByRole("button", { name: "Show all" }).click();
-    await expect(today.locator("article")).toHaveCount(7); // includes the finished job whose worktree awaits the delegating session
+    await expect(today.locator("article")).toHaveCount(6);
     await today.getByRole("button", { name: "Collapse" }).click();
     await expect(today.locator(".job-stack")).toBeVisible();
     await page
@@ -230,13 +227,12 @@ test("Resume creates the next run and refreshes the merged chain", async ({
   await expect(
     page.getByRole("status").filter({ hasText: "Started job-resumed-1" }),
   ).toBeVisible();
-  const queued = page.getByRole("region", { name: "Queued", exact: true });
+  const running = page.getByRole("region", { name: "In progress", exact: true });
   await expect(
-    queued
+    running
       .locator("article")
       .filter({ hasText: "Fix CLI exit code edge cases" }),
   ).toContainText("1 rework");
-  await expect(queued.locator("article")).toHaveCount(2);
 });
 test("Cancel needs an inline confirmation and can be backed out", async ({
   page,
@@ -260,6 +256,15 @@ test("Cancel needs an inline confirmation and can be backed out", async ({
   await dialog
     .getByRole("button", { name: "Confirm Cancel", exact: true })
     .click();
+  await expect(dialog).toContainText(
+    "Stop this job now? The harness stops immediately and the run cannot be continued as it is.",
+  );
+  expect(
+    (await (await request.get("/api/sub/jobs?all=1")).json()).find(
+      (j: { id: string }) => j.id === "job-review",
+    ).status,
+  ).toBe("running");
+  await dialog.getByRole("button", { name: "Stop job", exact: true }).click();
   await expect(running).toHaveCount(0);
   expect(
     (await (await request.get("/api/sub/jobs?all=1")).json()).find(
@@ -267,7 +272,7 @@ test("Cancel needs an inline confirmation and can be backed out", async ({
     ).status,
   ).toBe("canceled");
 });
-test("a finished job with a pending worktree is Done and leaves apply and discard to the delegating session", async ({ page }) => {
+test("a finished job with a pending worktree waits In review and leaves apply and discard to the delegating session", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/#/jobs");
   await page.getByRole("button", { name: "List", exact: true }).click();
@@ -275,6 +280,10 @@ test("a finished job with a pending worktree is Done and leaves apply and discar
     page.getByRole("region", { name: "Needs attention", exact: true })
       .locator("article").filter({ hasText: "Share job summaries" }),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "In review", exact: true })
+      .locator("article").filter({ hasText: "Share job summaries" }),
+  ).toHaveCount(1);
   const sizes = await page.locator("article.task-card").evaluateAll((cards) =>
     cards.flatMap((card) => [card, ...card.querySelectorAll("*")])
       .filter((node) => [...node.childNodes].some((child) => child.nodeType === 3 && child.textContent!.trim()))

@@ -64,7 +64,7 @@ function StationCell({ station, line, rows, now, card }: {
         </div>
       )) : <div className="belt-anchor">
         <svg className="belt" aria-hidden="true"><line x1="0" y1="50%" x2="100%" y2="50%" /></svg>
-        <p className="station-empty">— {station.key === "progress" ? "idle" : station.key === "attention" ? "nothing waiting" : "empty"}</p>
+        <p className="station-empty">— {station.key === "progress" ? "idle" : station.key === "attention" || station.key === "review" ? "nothing waiting" : "empty"}</p>
       </div>}
       {shipped && rows.length > 3 && (
         <Button size="sm" variant="ghost" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
@@ -129,8 +129,8 @@ function LineBoard({ chains, grouping, card, lines, now, quiet = false }: {
   quiet?: boolean;
 }) {
   const scroll = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(quiet ? 3 : 1);
-  const current = useRef(quiet ? 3 : 1);
+  const [active, setActive] = useState(quiet ? 3 : 0);
+  const current = useRef(quiet ? 3 : 0);
   const jobs: Job[] = lines.flatMap(line => line.jobs);
   const byId = new Map(chains.map(chain => [chain.latest.id, chain]));
 

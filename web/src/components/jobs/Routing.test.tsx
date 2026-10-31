@@ -97,7 +97,7 @@ it("edits aliases, ordered fallback and quota groups and saves the original vers
     target: { value: "second" },
   });
   fireEvent.change(screen.getByLabelText("Alias 2 harness"), {
-    target: { value: "opencode" },
+    target: { value: "codex" },
   });
   fireEvent.click(
     screen.getByRole("button", { name: "Move codex route 2 up" }),
@@ -119,7 +119,7 @@ it("edits aliases, ordered fallback and quota groups and saves the original vers
     config: {
       aliases: {
         fast: { harness: "codex", model: "new-model", effort: "high" },
-        second: { harness: "opencode", model: "", effort: "" },
+        second: { harness: "codex", model: "", effort: "" },
       },
       fallback: { codex: ["kimi", "@fast", "@second"] },
       quotaGroups: { shared: { harness: "agy", models: ["one", "three"] } },
@@ -131,6 +131,46 @@ it("edits aliases, ordered fallback and quota groups and saves the original vers
     ).not.toBeInTheDocument(),
   );
 });
+it("offers only same-harness routes and flags ignored cross-harness entries", async () => {
+  const read = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          ...snapshot,
+          config: {
+            ...snapshot.config,
+            aliases: {
+              fast: { harness: "codex", model: "gpt-test" },
+              cross: { harness: "opencode", model: "mini" },
+            },
+            fallback: { codex: ["@cross", "@fast"] },
+          },
+        }),
+      ),
+  );
+  const source: JobsSource = {
+    jobsPath: "/jobs",
+    costPath: "/cost",
+    routerPath: "/router",
+    fetch: read,
+    write: vi.fn(async () => new Response("{}")),
+  };
+  render(<Routing source={source} />);
+  fireEvent.click(screen.getByText("Routing", { exact: true }));
+  expect(
+    await screen.findByText(/Ignored cross-harness routes: @cross/),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByText(/Ignored: @cross runs on opencode/)).toBeInTheDocument();
+  expect(screen.getByLabelText("codex route 1")).toHaveValue("@cross");
+  const options = [...screen.getByLabelText("codex route 2").querySelectorAll("option")].map(
+    (option) => option.textContent,
+  );
+  expect(options).toEqual(["codex", "@fast"]);
+  fireEvent.click(screen.getByRole("button", { name: "Add route to codex" }));
+  expect(screen.getByLabelText("codex route 3")).toHaveValue("codex");
+});
+
 it("shows 422 errors beside the corresponding field and keeps editing", async () => {
   setup(422);
   fireEvent.click(await screen.findByRole("button", { name: "Edit" }));

@@ -7,7 +7,7 @@ export function createRouterAPI(writable = false) {
     config = {
       defaults: {codex: {model: "gpt-6.1-sol", effort: "high"}},
       aliases: { fast: { harness: "codex", model: "gpt-test", effort: "low" } },
-      fallback: { codex: ["@fast", "kimi"] },
+      fallback: { codex: ["@fast", "codex"] },
       quotaGroups: { shared: { harness: "agy", models: ["one", "two"] } },
     };
     data = JSON.stringify(config);

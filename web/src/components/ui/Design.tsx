@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { setTheme, type Theme } from "../../theme";
 
 export function SectionLabel({ children }: { children: ReactNode }) {
@@ -39,8 +39,15 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
   options: readonly (readonly [T, string])[];
   onChange: (value: T) => void;
 }) {
+  const selected = Math.max(0, options.findIndex(([key]) => key === value));
   return (
-    <div className="segmented" role="group" aria-label={label}>
+    <div
+      className="segmented"
+      role="group"
+      aria-label={label}
+      style={{ "--segments": options.length, "--segment-index": selected } as CSSProperties}
+    >
+      <span className="segmented-thumb" aria-hidden="true" />
       {options.map(([key, title]) => (
         <button type="button" key={key} aria-pressed={key === value} onClick={() => onChange(key)}>
           {title}

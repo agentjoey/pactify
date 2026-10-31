@@ -64,7 +64,7 @@ export function seedJobs() {
         baseCommit: "97e9d6bf2143",
         status: "pending",
       },
-      actions: ["resume", "apply", "discard"],
+      actions: ["resume", "apply", "discard", "dismiss"],
     },
     {
       ...base,
@@ -75,14 +75,6 @@ export function seedJobs() {
       finishedAt: ago(65),
       failureClass: "harness",
       attention: [{ kind: "failed", message: "Job failed" }],
-    },
-    {
-      ...base,
-      id: "job-queued",
-      title: "Queued implementation",
-      status: "queued",
-      createdAt: ago(1),
-      actions: ["cancel"],
     },
     {
       ...base,
@@ -159,7 +151,7 @@ export function createJobsAPI(writable = false) {
           models: {
             items:
               i === 0
-                ? ["gpt-6.1-sol", "gpt-6-sol"]
+                ? ["gpt-6.1-sol", "gpt-6-sol", LONG_MODEL]
                 : i === 3
                   ? ["model-one", "model-two", LONG_MODEL]
                   : ["model-one", "model-two"],

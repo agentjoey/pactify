@@ -51,7 +51,7 @@ for (const panel of [false, true]) test.describe(panel ? "panel line activity" :
     } else {
       if (width === 390) await page.getByRole("button", { name: "Go to Needs you", exact: true }).click();
       await page.getByRole("button", { name: "Dismiss", exact: true }).click();
-      await expect(page.getByRole("dialog")).toContainText("Dismiss this job? It stays in history but leaves Needs you.");
+      await expect(page.getByRole("dialog")).toContainText("Dismiss this job? It stays in history and moves to Shipped. Any worktree is kept.");
       await page.getByRole("button", { name: "Confirm Dismiss", exact: true }).click();
       await expect(page.getByRole("button", { name: "Dismiss", exact: true })).toHaveCount(0);
       await expect(page.locator('[data-station="completed"] a').filter({ hasText: "old-attention" })).toHaveCount(1);

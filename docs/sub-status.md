@@ -69,13 +69,13 @@ A single job remains an object, retaining the existing fields of the complete St
 
 A terminal job counts as acknowledged when its `dismissedAt` is non-zero, or when the worktree status is `applied` / `discarded`,
 and no longer produces `failed` / `warnings` attention. The `worktree_pending` rule is unchanged.
-The summary's `actions` array includes `dismiss` only for terminal jobs with unacknowledged failure or actionable warnings and no pending worktree. Applied or discarded worktrees already acknowledge those issues, so they do not offer Dismiss. Serve accepts `POST /api/sub/jobs/{id}/dismiss` with an optional empty JSON object; it uses the same acknowledgement operation as `pactify sub dismiss <id>`. The result and worktree remain unchanged; the read-only panel registers no write endpoint.
+The summary's `actions` array includes `dismiss` only for terminal jobs with unacknowledged failure or actionable warnings, and for any undismissed job with a pending worktree. Applied or discarded worktrees already acknowledge those issues, so they do not offer Dismiss. Serve accepts `POST /api/sub/jobs/{id}/dismiss` with an optional empty JSON object; it uses the same acknowledgement operation as `pactify sub dismiss <id>`. The result and worktree remain unchanged; the read-only panel registers no write endpoint.
 Apply and discard mark all existing turns that share the worktree, so failures and warnings from those turns also clear attention;
 new resume turns are still handled according to their own pending status. Fields such as `status`, `failureClass` and `warningCount` keep their original values.
 
 After review is complete and no further action is needed, run `pactify sub dismiss <id>` to clear failure and warning attention,
-including for read-only jobs without a worktree. The command accepts only one complete job id, requires the job to be finished, and requires the worktree to be applied or discarded
-(no worktree is also acceptable). Repeated execution succeeds and keeps the first time. It only updates State under the lifecycle lock and does not delete or rewrite the result, logs or resume relationships;
+including for read-only jobs without a worktree. The command accepts only one complete job id, and requires the job to be finished. A pending worktree stays pending and keeps its
+`worktree_pending` attention. Repeated execution succeeds and keeps the first time. It only updates State under the lifecycle lock and does not delete or rewrite the result, logs or resume relationships;
 like apply/discard, it does not provide `--json`.
 
 Informational warnings do not produce `warnings` attention: harness informational warnings (agy experimental or opencode permission boundary), `dirtyWorktreeWarning`,

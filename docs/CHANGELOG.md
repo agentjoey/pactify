@@ -10,6 +10,8 @@
 
 - Job titles skip generic headings such as "Background" and use the next line of the brief.
 
+- Job titles also skip shared sections such as "Shared constraints" or "Acceptance commands" that a batch of briefs repeats at the top, so each job shows its own heading instead of the same title.
+
 - Dashboard segmented controls slide between options, and canceling a running job takes two confirmations.
 
 - Job cards show the status, one harness/model label, one duration and the diff, with larger text and no run id. Finished jobs read Done; a pending worktree no longer counts as Needs you, and the dashboard no longer offers Apply or Discard, leaving those to the delegating session or the CLI.

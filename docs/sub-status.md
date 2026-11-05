@@ -16,7 +16,7 @@ The list is sorted by `createdAt` descending, with ties broken by id descending;
 
 ## JSON compatibility
 
-The `issue` field and issue-number extraction are removed. The title uses only the first non-empty line of the brief (no longer skipping section labels such as `Background:`), retaining Markdown cleanup and the 80-character limit; when using an issue tracker, you can write the number into the title yourself.
+The `issue` field and issue-number extraction are removed. The title is the first non-empty line of the brief after skipping generic labels such as `Background:` and shared Markdown sections that batches copy into every brief, such as `## Shared constraints` or `## 通用约束`, together with their bodies. It keeps Markdown cleanup and the 80-character limit; when using an issue tracker, you can write the number into the title yourself.
 
 The list remains an array of objects, retaining `jobId`, `status`, `harness`, `cwd`, `createdAt` and optional `finishedAt`, and adding the summary fields below; `id` is the same as `jobId`.
 A single job remains an object, retaining the existing fields of the complete State (including `request`, `updatedAt`, `error`, process information and worktree metadata) and `duration`, and adding the summary fields; it has no `jobId` alias. A single object also retains the historical zero-value `finishedAt` to mean unfinished; the list omits `finishedAt` for unfinished jobs.

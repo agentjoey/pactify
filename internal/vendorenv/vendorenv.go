@@ -3,8 +3,10 @@
 // vendor launch code can share one table.
 package vendorenv
 
-// APIKeys is every third-party model-provider credential pactify may
-// carry in its environment. A dedicated single-vendor agent has no business
+// APIKeys is the shared sibling-provider credential table. Dsh keeps its native
+// DEEPSEEK_API_KEY outside this table to preserve existing harness environment
+// contracts; its backend includes that key in redaction separately.
+// A dedicated single-vendor agent has no business
 // reading a sibling vendor's key — e.g. a kimi/codex stint inheriting the
 // user's real ANTHROPIC_API_KEY (review finding M11) — so when launching one we
 // blank the keys that aren't its own. os/exec keeps the last value for a
@@ -29,9 +31,13 @@ var APIKeys = []string{
 // A kind absent here (opencode, custom kinds) is model-agnostic — it may
 // legitimately use any provider — so its environment is left untouched.
 var ownKeys = map[string][]string{
-	"claude-code": {"ANTHROPIC_API_KEY"},
-	"codex-cli":   {"OPENAI_API_KEY"},
-	"kimi-cli":    {"MOONSHOT_API_KEY", "KIMI_API_KEY"},
+	// Only the dsh backend chooses this kind, for an unqualified official
+	// model. dsh-sdk stays model-agnostic at the worker boundary so explicit
+	// provider/model selections retain their provider credentials.
+	"dsh-official": {},
+	"claude-code":  {"ANTHROPIC_API_KEY"},
+	"codex-cli":    {"OPENAI_API_KEY"},
+	"kimi-cli":     {"MOONSHOT_API_KEY", "KIMI_API_KEY"},
 	// antigravity (agy) authenticates via an OAuth token FILE
 	// (~/.gemini/antigravity-cli/antigravity-oauth-token) by default — but
 	// `strings $(which agy)` (re-verified 2026-08-22 by independent review)

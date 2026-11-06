@@ -204,6 +204,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			installErr = fmt.Errorf("not installed (PATH): %w", installErr)
 		}
 		if installErr != nil {
+			if h.Name == "dsh" {
+				installErr = fmt.Errorf("%w; install with npm install -g @deepseek-ai/dsh", installErr)
+			}
 			add("Installed", false, installErr.Error())
 			for _, name := range []string{"Write access", "Model", "Read-only access", "Network", "Session hiding"} {
 				skip(name, "CLI unavailable; not run")
@@ -219,8 +222,17 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		h = h.forVersion(r.Version)
 		add("Installed", true, "CLI version "+r.Version)
+		if h.Name == "dsh" {
+			home, homeErr := dshHomeDir()
+			_, credentialErr := os.Stat(filepath.Join(home, ".credentials.yaml"))
+			if homeErr != nil || (os.Getenv("DEEPSEEK_API_KEY") == "" && credentialErr != nil) {
+				abortProbe("Model", "dsh credentials missing: set DEEPSEEK_API_KEY or authenticate with dsh in your user home")
+				reports = append(reports, alignDoctorChecks(r))
+				continue
+			}
+		}
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
-		network := h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
+		network := h.Name == "dsh" || h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
 		model := ""
 		if h.Name == "agy" {
 			// Agy requires an explicit model to select its supported flash probe profile.

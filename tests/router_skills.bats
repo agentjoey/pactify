@@ -15,7 +15,7 @@ for path in (root / 'skills').glob('*/SKILL.md'):
         assert '/delegate @alias <task>' in block, path
         assert '--worktree-from' in block and 'fallback' in block, path
         blocks.append(block)
-assert len(blocks) == 5 and len(set(blocks)) == 1
+assert len(blocks) == 6 and len(set(blocks)) == 1
 for path in (root / 'README.md', root.parent.parent / 'README.md'):
     assert 'docs/router.md' in path.read_text(), path
 PY

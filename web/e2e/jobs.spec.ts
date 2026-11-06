@@ -155,7 +155,7 @@ for (const width of [1440, 390]) {
       contentType: "image/png",
     });
     await navigate(page, "Settings", width);
-    for (const name of ["codex", "kimi", "agy", "opencode"]) {
+    for (const name of ["codex", "kimi", "agy", "opencode", "dsh"]) {
       const card = page.getByRole("article", { name, exact: true });
       await expect(card.getByText("experimental", { exact: true })).toHaveCount(
         name === "agy" ? 1 : 0,

@@ -21,7 +21,7 @@ The default harness is codex. kimi read-only access uses a generated private con
 
 ## Data handling
 
-pactify runs locally, has no telemetry, and operates no remote server. The plugin only runs pactify commands on your machine; its installation check never accesses the network. Briefs and repository content are sent only by the harness CLI you installed and logged in yourself, to that CLI's provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, and opencode to whichever provider you configured in opencode.
+pactify runs locally, has no telemetry, and operates no remote server. The plugin only runs pactify commands on your machine; its installation check never accesses the network. Briefs and repository content are sent only by the harness CLI you installed and logged in yourself, to that CLI's provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, dsh to DeepSeek by default, and opencode to whichever provider you configured in opencode.
 
 pactify stores data locally under `PACTIFY_HOME` (default `~/.pactify`): job metadata, briefs, logs, diffs and results, plus private harness homes and caches. Retention follows the [storage lifecycle](https://github.com/agentjoey/pactify/blob/main/docs/operations.md#storage-lifecycle). The dashboard (`pactify serve`) defaults to loopback, non-loopback binds require `PACTIFY_SERVE_TOKEN`, and the read-only panel listens only on `127.0.0.1`. To delete data, run `pactify sub prune` (preview, then `--yes`; add `--include-worktrees` for pending worktrees), or remove `PACTIFY_HOME`.
 
@@ -81,7 +81,7 @@ The Claude main thread first writes a complete brief with Background, numbered g
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
 Require inspection of callers, special cases, and documented exceptions before changing rules, and a failing regression test before each behavior change. Do not change existing tests to accommodate new behavior unless the brief explicitly identifies the old behavior as wrong; name any such changes in the final reply.
 Forbid commits and credential access; optionally forbid subagents and report files.
-The five delegation skills (delegate-codex, delegate-kimi, delegate-agy, delegate-opencode, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
+The six delegation skills (delegate-codex, delegate-kimi, delegate-agy, delegate-opencode, delegate-dsh, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
@@ -366,3 +366,11 @@ and `--worktree-from`, see [routing](https://github.com/agentjoey/pactify/blob/m
 - Documentation: [pactify.dev](https://pactify.dev) and the [main README](https://github.com/agentjoey/pactify#readme).
 - Bugs and questions: [GitHub issues](https://github.com/agentjoey/pactify/issues).
 - Security reports: follow [SECURITY.md](https://github.com/agentjoey/pactify/blob/main/SECURITY.md); do not open a public issue.
+
+Experimental dsh support uses the official DeepSeek Harness SDK 0.2.1 line
+(`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`). Invoke `/delegate-dsh` or
+`/pactify:delegate-dsh`, or the `pactify:sub-dsh` forwarding agent. This is a developer
+preview: the OS sandbox confines files and shell; network is not sandboxed.
+Linked worktrees cannot git add/commit because git metadata lies outside the workspace;
+Pactify still collects the diff. Minimal config isolates sessions in a managed DSH_HOME;
+`--with-user-config` keeps them visible. Telemetry is disabled in both modes.

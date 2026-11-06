@@ -30,6 +30,9 @@ type goldenOutcome struct {
 
 func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHome string, offsets map[string]int64) (goldenOutcome, error) {
 	backend := NewOpencodeBackend()
+	if tr.Harness == "dsh" {
+		backend = NewDSHBackend()
+	}
 	if tr.Harness == "opencode2" {
 		backend = NewOpencode2Backend()
 	}

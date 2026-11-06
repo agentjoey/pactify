@@ -82,7 +82,7 @@ columns: status, title, harness/model, project, duration, tokens, cost and time.
 Titles truncate with their full text in a tooltip. Narrow rows put title/status
 above one metadata line. Job details show one command list: in the pinned footer
 on desktop, or revealed from the compact footer button on narrow screens. Cards and
-Usage show reported costUSD, subscription for codex/kimi/agy without a reported
+Usage show reported costUSD, subscription for codex/kimi/agy/dsh without a reported
 cost, and unknown for other unpriced harnesses.
 
 ## API and boundaries

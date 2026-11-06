@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Add experimental support for DeepSeek Harness (`dsh` 0.2.1) through its SDK
+  protocol: write, read-only, resume, cancel and worktree jobs, token usage
+  including cached input, `pactify sub doctor` checks, Routing settings and the
+  `delegate-dsh` skill. Pactify runs dsh with its own home and links only the
+  default provider credentials. Known limits: the dsh sandbox does not restrict
+  network access, dsh cannot `git add` or `git commit` inside a linked worktree
+  (Pactify still collects the diff), requests that need approval fail because
+  this dsh version has no approval channel, quota errors do not trigger
+  fallback, and cost is not reported.
+
 - Dismiss now works on any finished job with a pending worktree, so those cards can be closed from the dashboard. The worktree stays pending and untouched.
 
 - Jobs replaces the always-empty Queued station with In review, for finished jobs whose delegating session has not yet applied or discarded the worktree. Queued jobs count as Running.

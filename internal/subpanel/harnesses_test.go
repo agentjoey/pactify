@@ -25,14 +25,14 @@ func TestHarnessesReadOnlyAPI(t *testing.T) {
 	var body struct {
 		Harnesses []sub.HarnessInfo `json:"harnesses"`
 	}
-	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &body) != nil || len(body.Harnesses) != 4 {
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &body) != nil || len(body.Harnesses) != 5 {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
 	for _, h := range body.Harnesses {
 		if h.Installed || h.Version != "" || h.Models.Items == nil || len(h.Models.Items) != 0 || h.Models.Error == "" || h.Models.FetchedAt.IsZero() || h.Efforts == nil {
 			t.Fatal(h)
 		}
-		if h.Experimental != (h.Name == "agy") || !h.ReadOnly || h.Sandboxed != (h.Name == "codex") {
+		if h.Experimental != (h.Name == "agy" || h.Name == "dsh") || !h.ReadOnly || h.Sandboxed != (h.Name == "codex" || h.Name == "dsh") {
 			t.Fatalf("promotion or access flags: %+v", h)
 		}
 		if h.Name == "codex" && (h.Default.Model != "selected" || !h.ReadOnly || h.Experimental) {

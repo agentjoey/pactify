@@ -209,7 +209,7 @@ func TestDistributions(t *testing.T) {
 			}
 		}
 	}
-	if counts["claude"] != 6 || counts["portable"] != 12 {
+	if counts["claude"] != 7 || counts["portable"] != 14 {
 		t.Fatalf("wrong skills: %v", counts)
 	}
 	portable := shared["portable"]

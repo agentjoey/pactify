@@ -725,7 +725,7 @@ turns:
 		}
 		if h.Name == "kimi" && h.LocalUsageBaseline != nil && h.Verify != nil && !interrupted && !canceled {
 			verifyCtx, cancel := context.WithTimeout(ctx, cfg.KimiWireTimeout)
-			v := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: cockpit.SessionInfo{Home: harnessHome}, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
+			v := h.Verify(verifyCtx, VerificationInput{Session: sess, SessionID: sess.ThreadID(), Info: cockpit.SessionInfo{Home: harnessHome}, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
 			cancel()
 			turnVerification = &v
 			if v.WireError != nil {
@@ -901,7 +901,7 @@ turns:
 		if turnVerification != nil {
 			verified = *turnVerification
 		} else {
-			verified = h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
+			verified = h.Verify(verifyCtx, VerificationInput{Session: sess, SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
 		}
 		result.ModelVerified = verified.Verified
 		if verified.CostUSD != nil {

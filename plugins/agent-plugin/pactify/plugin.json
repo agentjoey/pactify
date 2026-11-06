@@ -4,17 +4,18 @@
     "name": "Pactify",
     "url": "https://pactify.dev"
   },
-  "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy; review results and view job status.",
+  "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy or dsh; review results and view job status.",
   "homepage": "https://pactify.dev",
   "keywords": [
     "delegation",
     "harness",
     "codex",
     "kimi",
-    "opencode"
+    "opencode",
+    "dsh"
   ],
   "license": "FSL-1.1-MIT",
   "name": "pactify",
   "repository": "https://github.com/agentjoey/pactify",
-  "version": "0.6.2"
+  "version": "0.6.3"
 }

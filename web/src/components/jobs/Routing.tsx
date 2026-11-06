@@ -4,7 +4,7 @@ import { Button } from "../ui/Button";
 import type { JobsSource } from "./source";
 import { panelBuild } from "../../buildTarget";
 
-const harnesses = ["codex", "kimi", "agy", "opencode"];
+const harnesses = ["codex", "kimi", "agy", "opencode", "dsh"];
 interface Route {
   harness: string;
   model?: string;

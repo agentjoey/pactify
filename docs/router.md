@@ -219,8 +219,27 @@ cannot apply twice; discarded worktrees cannot resume. A missing directory still
 allows discard to clean up Git registration. HTTP cancellation of terminal jobs
 returns 409, while the CLI retains its terminal cleanup behavior.
 
-`sandboxed` is always a boolean: true for codex, false for other harnesses.
+`sandboxed` is always a boolean: true for codex and dsh, false for other harnesses.
 Kimi read-only uses a generated private tool allowlist, verifies per-agent tools
 snapshots and checks the repository baseline. Opencode read-only removes write/shell
 tools and checks the repository baseline. Neither provides an OS sandbox. Model-name heuristics do not infer free usage
 from `cost=0`.
+
+## Experimental DeepSeek Harness
+
+Use `pactify sub run dsh` to select the developer-preview SDK adapter. Default
+provider/model: deepseek-official/deepseek-v4-flash; efforts: off, low, high, max.
+Minimal config uses a managed DSH_HOME, reused on resume. `--with-user-config`
+keeps sessions visible in the user's home. Telemetry is disabled in both modes.
+
+Unqualified dsh models use deepseek-official. These launches blank sibling
+credential variables listed in vendorenv, while keeping DEEPSEEK_API_KEY and
+DEEPSEEK_BASE_URL. An explicit `provider/model` selection preserves the environment,
+including an explicit `deepseek-official/model`; use this only when the selected
+provider needs those credentials. Known credential values are redacted from
+forwarded stderr and protocol transcripts in both modes.
+
+Network is not sandboxed. In linked worktrees, the file and shell sandbox denies
+git add/commit because git metadata is outside the workspace; Pactify still
+collects the diff. Job TMPDIR is passed through without extra writable roots.
+See the [SDK contract and configuration](architecture.md#experimental-deepseek-harness).

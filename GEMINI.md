@@ -1,7 +1,7 @@
 # Pactify — GEMINI contributor guide
 
 Pactify is a local harness router for coding tasks. The CLI and Claude Code plugin
-route jobs to codex by default, with kimi and opencode support and experimental agy support.
+route jobs to codex by default, with kimi and opencode support and experimental agy and dsh support.
 Jobs provide logs, results, resume, cancellation, worktree isolation and quota fallback.
 Codex write mode enables network access by default.
 
@@ -51,7 +51,7 @@ The live harness E2E suite is opt-in and can consume model quota; see its
   live in `internal/serve/dist/`; panel assets live in `internal/subpanel/dist/`.
 - Edit `plugins/src/` and run `go run ./internal/plugingen/cmd/plugingen`; never
   hand-edit generated skills. Bump the plugin version in `plugins/src/config.json`
-  when changing the plugin and regenerate both manifests. Keep the five
+  when changing the plugin and regenerate both manifests. Keep the six
   SHARED-DELEGATION blocks identical and the three entry guides identical except
   their first line. See [generator instructions](plugins/src/README.md).
 - Record user-visible changes under Unreleased in [CHANGELOG](docs/CHANGELOG.md).

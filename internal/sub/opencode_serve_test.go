@@ -82,7 +82,7 @@ func TestSandboxedContractV2(t *testing.T) {
 	for _, name := range Names() {
 		t.Run(name, func(t *testing.T) {
 			h, _ := Lookup(name)
-			want := name == "codex"
+			want := name == "codex" || name == "dsh"
 			store := Store{Root: filepath.Join(t.TempDir(), "jobs")}
 			store.Create("job", Request{Harness: name})
 			r := Result{Status: StatusSucceeded}

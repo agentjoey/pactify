@@ -168,5 +168,5 @@ export function parseQuotaWindows(
 // Match sub cost: reported dollars take precedence over subscription labels.
 export function jobCost(job: Job) {
   if (job.costUSD != null) return formatCost(job.costUSD);
-  return ["codex", "kimi", "agy"].includes(job.harness) ? "subscription" : "unknown";
+  return ["codex", "kimi", "agy", "dsh"].includes(job.harness) ? "subscription" : "unknown";
 }

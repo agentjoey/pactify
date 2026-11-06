@@ -426,14 +426,14 @@ func TestHarnessCatalogPromotionAndAccess(t *testing.T) {
 	s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
 	c := newHarnessCatalog()
 	c.lookupPath = func(string) (string, error) { return "", errors.New("not installed") }
-	for _, name := range []string{"codex", "kimi", "agy", "opencode"} {
+	for _, name := range []string{"codex", "kimi", "agy", "opencode", "dsh"} {
 		t.Run(name, func(t *testing.T) {
 			h, ok := Lookup(name)
 			if !ok {
 				t.Fatal("missing harness")
 			}
 			row := c.harness(context.Background(), s, h, HarnessDefault{}, false)
-			if row.Experimental != (name == "agy") || !row.ReadOnly || row.Sandboxed != (name == "codex") {
+			if row.Experimental != (name == "agy" || name == "dsh") || !row.ReadOnly || row.Sandboxed != (name == "codex" || name == "dsh") {
 				t.Fatalf("catalog promotion or access flags: %+v", row)
 			}
 		})

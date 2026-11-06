@@ -190,3 +190,11 @@ purpose except a Competing Use; internal use, non-commercial education and
 research, and professional services are permitted. Each version becomes available
 under the MIT license two years after its release. Versions up to and including
 v0.13.0 were released under the MIT license and remain available under it.
+
+Experimental dsh support uses the official DeepSeek Harness SDK 0.2.1 line
+(`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`). Invoke `/delegate-dsh` or
+`/pactify:delegate-dsh`, or the `pactify:sub-dsh` forwarding agent. This is a developer
+preview: the OS sandbox confines files and shell; network is not sandboxed.
+Linked worktrees cannot git add/commit because git metadata lies outside the workspace;
+Pactify still collects the diff. Minimal config isolates sessions in a managed DSH_HOME;
+`--with-user-config` keeps them visible. Telemetry is disabled in both modes.

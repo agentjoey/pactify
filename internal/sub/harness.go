@@ -74,6 +74,7 @@ type Harness struct {
 
 // VerificationInput bounds independent verification to this job's prompts.
 type VerificationInput struct {
+	Session     cockpit.Session // Optional process-local independent evidence.
 	Env         []string
 	Cwd         string
 	SessionID   string
@@ -104,6 +105,19 @@ type ConcealContext struct {
 }
 
 var registry = map[string]Harness{
+	"dsh": {
+		Name: "dsh", Kind: "dsh-sdk", Backend: cockpit.NewDSHBackend,
+		Version: cliVersion("dsh", "DSH_TELEMETRY_DISABLED=1"), Supported: dshSupported,
+		Experimental:  "dsh is a developer preview; network is not sandboxed. In linked worktrees, the sandbox denies git add/commit because git metadata is outside the workspace; Pactify still collects the diff",
+		Warning:       "In linked worktrees, dsh cannot git add/commit: git metadata is outside the sandbox workspace; Pactify still collects the diff",
+		MinimalConfig: true, DoctorModel: cockpit.DSHDefaultModel,
+		EffortValues: []string{"off", "low", "high", "max"},
+		Home:         &harnessHome{Env: "DSH_HOME", Source: dshHomeDir, Managed: managedDSHHome, Layout: dshHome, Doctor: doctorDSHHome},
+		Verify:       verifyDSH,
+		Conceal: func(ConcealContext) error {
+			return fmt.Errorf("dsh --with-user-config keeps sessions in the user's session list; use minimal config to hide delegated sessions")
+		},
+	},
 	"agy": {
 		ModelIncludesEffort: true,
 		TransientRetry:      true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,

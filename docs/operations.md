@@ -225,3 +225,7 @@ Locally built binaries installed as macOS background services need ad-hoc signin
 not ordinary foreground use. Release installation and local builds are separate.
 
 See [installation](deployment.md) and [CHANGELOG](CHANGELOG.md).
+
+Storage cleanup does not recognize experimental dsh session units because their
+on-disk layout is not pinned by the SDK contract. Generic log retention still
+applies; credential links remain protected.

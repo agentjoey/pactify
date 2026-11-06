@@ -82,11 +82,11 @@ CLI
   [[ "$output" == *"pactify version failed"* ]]
 }
 
-@test "harness skills are renamed and delegation requires an explicit user request in all five identical guides" {
+@test "harness skills are renamed and delegation requires an explicit user request in all six identical guides" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-names = ('delegate', 'delegate-codex', 'delegate-kimi', 'delegate-agy', 'delegate-opencode', 'jobs')
+names = ('delegate', 'delegate-codex', 'delegate-kimi', 'delegate-agy', 'delegate-opencode', 'delegate-dsh', 'jobs')
 assert {p.name for p in (root / 'skills').iterdir()} == set(names)
 blocks = []
 for name in names:
@@ -103,7 +103,7 @@ for name in names:
         assert term in block, (name, term)
     assert 'When deciding on your own' not in text, name
     blocks.append(block)
-assert len(blocks) == 5 and len(set(blocks)) == 1
+assert len(blocks) == 6 and len(set(blocks)) == 1
 for path in (root / 'agents').glob('*.md'):
     assert 'user explicitly' in path.read_text(), path
 PY
@@ -144,7 +144,7 @@ for path in (root / 'skills').glob('*/SKILL.md'):
         block = text.split('<!-- BEGIN SHARED-DELEGATION -->')[1].split('<!-- END SHARED-DELEGATION -->')[0]
         assert '--resume <job-id>' in block, path
         blocks.append(block)
-assert len(blocks) == 5 and len(set(blocks)) == 1
+assert len(blocks) == 6 and len(set(blocks)) == 1
 jobs = (root / 'skills/jobs/SKILL.md').read_text()
 assert '--resume <id>' in jobs
 assert 'Resume is not' not in jobs

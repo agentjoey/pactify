@@ -134,7 +134,7 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 	if Terminal(st.Status) {
 		return nil
 	}
-	result.Sandboxed = st.Request.Harness == "codex"
+	result.Sandboxed = st.Request.Harness == "codex" || st.Request.Harness == "dsh"
 	result.ConfigMode = st.EffectiveConfigMode()
 	result.FallbackFrom, result.FallbackTo = st.FallbackFrom, st.FallbackTo
 	// Preserve routing evidence for every terminal path, including cancellation,

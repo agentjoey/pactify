@@ -121,7 +121,7 @@ func storageCredential(path string) bool {
 	}
 	for _, part := range parts {
 		switch strings.ToLower(part) {
-		case "credentials", "oauth", "auth.json", "device_id", "secrets", "antigravity-oauth-token", "config.toml":
+		case ".credentials.yaml", "credentials", "oauth", "auth.json", "device_id", "secrets", "antigravity-oauth-token", "config.toml":
 			return true
 		}
 	}

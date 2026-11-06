@@ -177,7 +177,7 @@ func (c *harnessCatalog) harnesses(ctx context.Context, s Store, refresh bool) (
 }
 
 func (c *harnessCatalog) harness(ctx context.Context, s Store, h Harness, defaults HarnessDefault, refresh bool) HarnessInfo {
-	row := HarnessInfo{Sandboxed: h.Name == "codex", Name: h.Name, Default: defaults, Efforts: h.Efforts(), Experimental: h.Experimental != "", ReadOnly: h.NoReadOnly == ""}
+	row := HarnessInfo{Sandboxed: h.Name == "codex" || h.Name == "dsh", Name: h.Name, Default: defaults, Efforts: h.Efforts(), Experimental: h.Experimental != "", ReadOnly: h.NoReadOnly == ""}
 	row.VerifiedVersion = readVerifiedVersions(filepath.Join(filepath.Dir(s.Root), "verified-versions.json"))[h.Name].Version
 	c.load(s)
 	stamp, installed := c.executable(h.Name)

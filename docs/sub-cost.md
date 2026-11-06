@@ -47,7 +47,7 @@ HTTP extension fields and refresh behavior are described in [Jobs view](jobs-vie
 
 Only numeric `costUSD` explicitly provided by the result is aggregated; currently it is normally provided by opencode.
 Missing or `null` values are not filled with zero; an explicit `0` is a valid reported cost. `costUSD` is JSON `null` when no
-US-dollar cost was reported. When codex, kimi or agy does not provide a cost it is counted as a subscription and displayed as `subscription`;
+US-dollar cost was reported. When codex, kimi, agy or dsh does not provide a cost it is counted as a subscription and displayed as `subscription`;
 when another harness has no cost it displays `unknown (N)`. Mixed groups and totals display both reported US dollars and
 `subscription` / `unknown (N)`, for example `subscription + unknown (2)` or
 `$0.125000 + subscription + unknown (2)`.

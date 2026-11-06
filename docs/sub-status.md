@@ -102,6 +102,14 @@ When a job fails, is canceled, hits an idle timeout or the connection closes ear
 
 opencode uses the v1 `GET /session/{id}` tokens/cost session summary and subtracts the baseline taken at this Start: input is input + cache.read + cache.write, output is output + reasoning. Automatic retries share the startup baseline, while manual resumes take a new baseline after a server restart so history is not counted twice. Individual usage returned by `/message` does not participate in accumulation, and `opencode export` is no longer called. When a complete summary cannot be obtained, `usagePartial` is set.
 
+dsh sums each SDK assistant/message usage record: input is inputTokens +
+cacheReadTokens + cacheWriteTokens, and output is outputTokens. This applies to
+both unified usage events and independent usage verification. Child sessions
+contribute tokens, and a resumed process does not replay historical records.
+Cost is unavailable. Runtime serverInfo.version (currently 0.0.1) is independent
+of the npm package version; only the CLI version is checked against the supported
+0.2.1 package line.
+
 State keeps the atomic rename convention, and status keeps using the existing Recover and lifecycle lock handling for lost workers. When the JSON summary encounters a missing or corrupt result it still displays the job, with result fields left empty or 0; the full usage summary in human-readable output continues to error on corrupt/missing terminal results instead of silently giving an incomplete summary. Older jobs missing the new metadata are output normally.
 
 List queries skip job directories that have not yet written `state.json` (including
@@ -123,6 +131,11 @@ and the original `error` text in State and the existing exit codes remain unchan
 structured evidence such as Codex `rateLimits.primary/secondary.usedPercent >= 100`, `codexErrorInfo`,
 ACP `AUTH_REQUIRED (-32000)` and opencode `APIError.data` is preferred, with error text matched last.
 opencode `isRetryable=true` or 5xx is transient; a 429 with quota wording such as balance/quota/credit/budget is quota, and other 429s are transient.
+DSH terminal and RPC diagnostics preserve sanitized codes/messages, but dsh has
+no vendor failure classifier yet: these errors retain class `other`, so automatic
+quota fallback does not trigger for dsh, even when the message reports exhausted
+balance. Other harness classifiers are unchanged.
+
 SSE session.error configuration/model errors are other, with the readable error preserved. ACP only completes on end_turn; cancelled/refusal/max_tokens/max_turn_requests all fail and retain their classes.
 `-32603` is only a generic Internal Error and cannot be classified as transient on its own; for example, insufficient balance is still quota.
 User cancellation takes precedence over backend errors; idle timeout is idle_timeout. Read-only denials, git environment errors,
@@ -203,7 +216,7 @@ jobs that had retries, counting a single job only once even if it retried multip
 
 ## Empty-reply follow-up
 
-For every harness (codex, kimi, agy, opencode), when a turn ends normally and the final text is still empty after `strings.TrimSpace`,
+For every harness (codex, kimi, agy, opencode, dsh), when a turn ends normally and the final text is still empty after `strings.TrimSpace`,
 the worker asks exactly once more in the same live session:
 
 > You ended without a written answer. Reply now with your result: what you found or changed and which checks you ran. Do not start new work.

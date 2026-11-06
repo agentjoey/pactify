@@ -3,7 +3,7 @@
 > Current release: **v0.13.0**. See [CHANGELOG](CHANGELOG.md).
 
 Pactify is a local harness router. The CLI and Claude Code plugin delegate tasks
-to codex (default), kimi, agy and opencode. Jobs, results and worktrees are managed
+to codex (default), kimi, agy, opencode and experimental dsh. Jobs, results and worktrees are managed
 locally.
 
 ## Components
@@ -64,3 +64,31 @@ timeout; streaming responses have no overall write timeout. See
 Job and router data live under `PACTIFY_HOME` (default `~/.pactify`). No pact
 protocol files, ledger projections, MCP server or agent configuration wiring are
 part of the current product.
+
+## Experimental DeepSeek Harness
+
+The `dsh` adapter uses `dsh --profile sdk` (NDJSON JSON-RPC 2.0), with the
+0.2.1 SDK contract pinned at 0.2.1-rc.5. Install with
+`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`; `pactify sub doctor dsh` checks
+installation, version, credential presence, model and access modes. Newer upstream
+SDK documentation is not the rc.5 contract. Unsupported versions require a supported
+reinstall. Release watch follows the `@deepseek-ai/dsh` npm channel, including prereleases.
+
+This is a developer preview. DSH_PERMISSION_MODE selects native read-only or
+workspace-write enforcement for files and shell; network is not sandboxed.
+Escalation fails closed without an approval channel. Linked worktrees cannot git
+add/commit because git metadata is outside the workspace; Pactify still collects
+the diff. The sandbox is never widened. Job TMPDIR is passed through as for other
+harnesses; the adapter requests no additional writable roots.
+
+Default minimal config uses a managed DSH_HOME; only an existing .credentials.yaml
+is linked from the user's DSH_HOME or ~/.dsh. Credential contents are never read
+or copied. DEEPSEEK_API_KEY is inherited; telemetry is disabled with
+DSH_TELEMETRY_DISABLED=1 in both modes. `--with-user-config` uses the user's home
+and keeps sessions visible. Managed resume reuses its saved home.
+
+Default provider/model: deepseek-official/deepseek-v4-flash. Efforts: off, low,
+high, max. Completion requires session/wait and a completed root turn/end. Child
+sessions contribute usage and tool activity, but not final text. Each assistant
+message contributes tokens; cost is unavailable. SIGTERM cancellation remains a
+canceled turn even if the runtime exits successfully; resume uses a new process.

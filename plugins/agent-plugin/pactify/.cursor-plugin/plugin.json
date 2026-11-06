@@ -3,7 +3,7 @@
     "name": "Pactify",
     "url": "https://pactify.dev"
   },
-  "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy; review results and view job status.",
+  "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy or dsh; review results and view job status.",
   "name": "pactify",
-  "version": "0.6.2"
+  "version": "0.6.3"
 }

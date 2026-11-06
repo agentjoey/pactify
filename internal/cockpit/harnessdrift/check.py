@@ -55,6 +55,13 @@ def check_constants(binary):
 
 
 def static_check():
+    if not re.fullmatch(r'0\.2\.1(?:-[0-9A-Za-z.-]+)?', VERSIONS['dsh']):
+        raise ValueError('invalid dsh SDK contract baseline')
+    dsh = (COCKPIT / 'dsh.go').read_text()
+    for method in ('initialize', 'session/prompt', 'session/wait', 'session/resume', 'shutdown'):
+        if f'"{method}"' not in dsh:
+            raise ValueError(f'dsh SDK method {method} is stale')
+
     source = (COCKPIT / 'agy.go').read_text()
     for event in agy_events():
         if f'case "{event}":' not in source:

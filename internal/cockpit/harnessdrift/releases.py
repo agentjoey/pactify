@@ -15,6 +15,7 @@ AGY_MANIFEST = 'https://antigravity-cli-auto-updater-974169037036.us-central1.ru
 # Every channel an official installer can deliver, including successor
 # packages: opencode 2.x ships as @opencode/cli while opencode-ai stays on 1.x.
 CHANNELS = {
+    'dsh': [('npm', '@deepseek-ai/dsh', 'dsh')],
     'codex': [('npm', '@openai/codex', 'codex')],
     'kimi': [('npm', '@moonshot-ai/kimi-code', 'kimi')],
     'opencode': [('npm', 'opencode-ai', 'opencode'), ('npm', '@opencode/cli', 'opencode2')],
@@ -22,7 +23,7 @@ CHANNELS = {
 }
 # Major lines already triaged. A tracked line is reported, not alerted; remove
 # the entry once the adapter supports that line and the baseline moves.
-TRACKED = {}
+TRACKED = {('dsh', 0): 'experimental SDK adapter supports only 0.2.1; triage newer minor and patch lines'}
 
 
 def baselines():
@@ -56,6 +57,10 @@ def classify(harness, baseline, version, deprecated=''):
     if deprecated:
         return 'alert', f'latest {version} is deprecated: {deprecated}'
     have, want = major(baseline), major(version)
+    # dsh's experimental SDK is pinned by patch, unlike the established
+    # harnesses' major-line policies (codex zero minors remain routine).
+    if harness == 'dsh' and want == 0 and not re.fullmatch(r'v?0\.2\.1(?:[-+][0-9A-Za-z.-]+)?', version or ''):
+        return 'tracked', f'{version} — unsupported SDK line: {TRACKED[(harness, 0)]}'
     if want is None:
         return 'alert', f'unrecognized version {version!r}'
     if have is not None and want < have:

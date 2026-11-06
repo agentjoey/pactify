@@ -1,6 +1,6 @@
 # Upstream harness compatibility
 
-Pactify tracks codex, kimi, opencode and agy contracts. Unsupported CLI versions
+Pactify tracks codex, kimi, opencode, agy and experimental dsh contracts. Unsupported CLI versions
 must fail before a harness process starts, with a clear explanation and recovery
 suggestion. Track successor packages as well as the original installation channel:
 a package's `latest` tag alone does not reveal a migration to a new package.
@@ -97,3 +97,21 @@ relative to the git worktree root, so they cannot override its absolute file lis
 when a job starts in a repository subdirectory. V2 edit/patch use action `edit`
 and resources relative to the session directory or absolute paths; `../` paths
 outside the allowed roots remain denied.
+
+## Experimental DeepSeek Harness
+
+The `dsh` adapter consumes `dsh --profile sdk` NDJSON JSON-RPC 2.0, pinned to
+0.2.1-rc.5 and restricted to the 0.2.1 line. Install with
+`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`; newer upstream main documentation is
+not the rc.5 contract. Release watch follows `@deepseek-ai/dsh` npm tags, including
+prereleases, and tracks unsupported patch/minor changes separately. Existing
+codex, kimi, opencode and agy release-line policies remain unchanged.
+
+The fake stdio runtime covers initialize, prompt enqueue followed by wait,
+root-only completion and text, tool calls, usage, unknown notifications, RPC
+errors, cancellation, crashes and resume. Golden recording and synthetic replay
+are offline. Live verification is a separate reviewer step; ordinary checks
+never install or invoke dsh or call a model. Use `pactify sub doctor dsh` for
+installation, version, credential-presence, model and access checks when authorized.
+See [architecture](architecture.md#experimental-deepseek-harness) for sandbox,
+managed-home, telemetry, worktree and TMPDIR limits.

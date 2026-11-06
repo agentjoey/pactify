@@ -1,0 +1,39 @@
+---
+name: delegate-dsh
+description: Use when the user explicitly asks to delegate a coding task to the experimental dsh harness. Developer preview; network is not sandboxed.{{if ne .Host "claude"}}
+license: {{.License}}
+compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}), dsh 0.2.1 and git on macOS or Linux; the host must allow running pactify sub outside its sandbox.'{{end}}
+---
+{{if ne .Host "claude"}}
+<!-- Generated from plugins/src; do not edit. -->
+{{end}}
+{{include "fragments/prerequisites.md.tmpl"}}
+# Delegate to dsh
+
+**Experimental developer preview. Files and shell use the OS sandbox; network is not sandboxed.**
+Use only when the user explicitly requests delegation.
+
+**If the user invoked this skill explicitly ({{command "delegate-dsh"}}), always delegate —
+whatever the task size. The user chose the harness.**
+
+Launch command (step 2 below):
+
+{{if eq .Host "claude"}}    pactify sub run dsh --write --worktree --wait 0s --json <<'BRIEF'
+    ...complete brief from step 1...
+    BRIEF
+{{else}}    pactify sub run dsh --write --worktree --wait 0s --json --brief-file <brief-file>
+{{end}}
+Use `--read-only` for investigations and reviews. Use `--write` only when the user allows changes.
+Never raise permissions yourself. Default model: deepseek-v4-flash (provider deepseek-official).
+Preserve an explicit `--model`; efforts are off, low, high and max.
+Resume with `--resume <job-id> --worktree` and the original cwd.
+
+{{include "shared-delegation.md.tmpl"}}
+
+Pactify uses `dsh --profile sdk`, pinned to the 0.2.1 SDK line. Read-only mode also
+fails if the final repository diff is nonempty. Linked worktrees cannot git add/commit
+because their git metadata is outside the sandbox; Pactify still collects the diff.
+Default minimal config uses a private DSH_HOME with a credential link when present;
+DEEPSEEK_API_KEY passes through. Never inspect credentials. `--with-user-config` keeps
+sessions visible in the user's home. Telemetry is disabled in both modes.
+Job TMPDIR is passed through; no extra writable roots or approval channel are available.

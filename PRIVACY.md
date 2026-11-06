@@ -10,7 +10,7 @@ When you delegate a task, pactify handles the brief you write and the repository
 
 ## Where data goes
 
-Briefs and repository content are sent only by the harness CLI you installed and logged in yourself. That CLI sends data to its provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, and opencode to whichever provider you configured in opencode. Those providers' own privacy policies apply to the data their CLIs send.
+Briefs and repository content are sent only by the harness CLI you installed and logged in yourself. That CLI sends data to its provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, dsh to DeepSeek by default, and opencode to whichever provider you configured in opencode. Those providers' own privacy policies apply to the data their CLIs send.
 
 ## Local storage, retention and deletion
 

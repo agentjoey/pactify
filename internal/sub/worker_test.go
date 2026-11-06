@@ -431,7 +431,7 @@ func TestSubHarnessRegistry(t *testing.T) {
 	if _, ok := Lookup("fake"); ok {
 		t.Fatal("fake enabled by default")
 	}
-	if got := strings.Join(Names(), ","); got != "agy,codex,kimi,opencode" {
+	if got := strings.Join(Names(), ","); got != "agy,codex,dsh,kimi,opencode" {
 		t.Fatalf("names=%s", got)
 	}
 	t.Setenv("PACTIFY_SUB_FAKE", "1")

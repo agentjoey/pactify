@@ -140,7 +140,7 @@ export function createJobsAPI(writable = false) {
     const url = new URL(req.url, "http://localhost");
     if (req.method === "GET" && path === "/api/harnesses") {
       send(res, 200, {
-        harnesses: ["codex", "kimi", "agy", "opencode"].map((name, i) => ({
+        harnesses: ["codex", "kimi", "agy", "opencode", "dsh"].map((name, i) => ({
           name,
           installed: i !== 2,
           version: "1.0",

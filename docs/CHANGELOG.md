@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## v0.15.0 — 2026-11-07
 
+DeepSeek Harness (dsh) joins as an experimental harness; the Jobs dashboard is restyled
+with an In review lane, simpler job cards and clearer job titles; quota fallback stays on
+one harness; and the Claude Code plugin is prepared for the plugin directory.
+
+- The plugins and skills require pactify 0.15.0, the first release with the dsh harness
+  (plugin 0.7.0). The Claude Code plugin README gains a dsh section and a dsh column in
+  its access-mode table.
 - Add experimental support for DeepSeek Harness (`dsh` 0.2.1) through its SDK
   protocol: write, read-only, resume, cancel and worktree jobs, token usage
   including cached input, `pactify sub doctor` checks, Routing settings and the

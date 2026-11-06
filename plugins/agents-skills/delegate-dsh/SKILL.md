@@ -2,7 +2,7 @@
 name: delegate-dsh
 description: Use when the user explicitly asks to delegate a coding task to the experimental dsh harness. Developer preview; network is not sandboxed.
 license: FSL-1.1-MIT
-compatibility: 'Requires the pactify CLI (>= 0.14.0), dsh 0.2.1 and git on macOS or Linux; the host must allow running pactify sub outside its sandbox.'
+compatibility: 'Requires the pactify CLI (>= 0.15.0), dsh 0.2.1 and git on macOS or Linux; the host must allow running pactify sub outside its sandbox.'
 ---
 
 <!-- Generated from plugins/src; do not edit. -->

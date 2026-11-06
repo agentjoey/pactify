@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 Before the first pactify command in a session, run `pactify-check --quiet` once (this plugin's `bin/`
 is on the Bash PATH). No output means the CLI is ready. If `pactify-check` is not found, run
-`pactify version` and compare it with the minimum version 0.14.0.
+`pactify version` and compare it with the minimum version 0.15.0.
 If the CLI is missing or too old, show the user these commands and ask them to install or upgrade it.
 Never run these commands or any installer yourself:
 

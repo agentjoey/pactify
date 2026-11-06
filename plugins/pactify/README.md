@@ -280,13 +280,23 @@ without following symlinks, with a warning. Keep this directory for resume.
 the user's list; agy has no supported archive API. `sub doctor agy` checks the
 normal minimal configuration, including directory permissions and link integrity.
 
+## dsh (experimental)
+
+Experimental dsh support uses the official DeepSeek Harness SDK 0.2.1 line
+(`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`). Invoke `/delegate-dsh` or
+`/pactify:delegate-dsh`, or the `pactify:sub-dsh` forwarding agent. This is a developer
+preview: the OS sandbox confines files and shell; network is not sandboxed.
+Linked worktrees cannot git add/commit because git metadata lies outside the workspace;
+Pactify still collects the diff. Minimal config isolates sessions in a managed DSH_HOME;
+`--with-user-config` keeps them visible. Telemetry is disabled in both modes.
+
 ## Access modes
 
-| | codex | kimi | agy | opencode |
-|---|---|---|---|---|
-| Support | Supported (default) | Supported | Experimental | Supported (1.x and 2.x) |
-| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + per-type permissions + directory guardrail |
-| `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
+| | codex | kimi | agy | opencode | dsh |
+|---|---|---|---|---|---|
+| Support | Supported (default) | Supported | Experimental | Supported (1.x and 2.x) | Experimental (0.2.1) |
+| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + per-type permissions + directory guardrail | workspace-write OS sandbox for files and shell, **network not sandboxed**; no approval channel |
+| `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline | read-only OS sandbox for files and shell, network not sandboxed |
 
 ## Known limitations
 
@@ -366,11 +376,3 @@ and `--worktree-from`, see [routing](https://github.com/agentjoey/pactify/blob/m
 - Documentation: [pactify.dev](https://pactify.dev) and the [main README](https://github.com/agentjoey/pactify#readme).
 - Bugs and questions: [GitHub issues](https://github.com/agentjoey/pactify/issues).
 - Security reports: follow [SECURITY.md](https://github.com/agentjoey/pactify/blob/main/SECURITY.md); do not open a public issue.
-
-Experimental dsh support uses the official DeepSeek Harness SDK 0.2.1 line
-(`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`). Invoke `/delegate-dsh` or
-`/pactify:delegate-dsh`, or the `pactify:sub-dsh` forwarding agent. This is a developer
-preview: the OS sandbox confines files and shell; network is not sandboxed.
-Linked worktrees cannot git add/commit because git metadata lies outside the workspace;
-Pactify still collects the diff. Minimal config isolates sessions in a managed DSH_HOME;
-`--with-user-config` keeps them visible. Telemetry is disabled in both modes.

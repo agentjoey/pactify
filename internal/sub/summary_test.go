@@ -309,6 +309,24 @@ func TestBriefSummarySkipsSectionHeadings(t *testing.T) {
 	}
 }
 
+// Batches of briefs often open with a shared section copied into every slice;
+// the title must come from the slice's own heading instead.
+func TestBriefSummarySkipsSharedPreambleSections(t *testing.T) {
+	for _, tc := range []struct{ brief, want string }{
+		{"\n## 通用约束（所有片相同）\n- 仓库：Example\n- 不碰生产\n\n## 验收命令（所有片相同）\n```\nnpm test\n```\n\n# Example-1105：设置页表单加旧标签页保护\nRequest: link\n## 要做\n1. 修\n", "Example-1105：设置页表单加旧标签页保护"},
+		{"# 通用约束（Example 批次，每片必读）\n\n## 工作区\n- 只在 worktree 里工作\n\n# 片 Example-1060：范围外请求得体回复\n## 要做\n", "片 Example-1060：范围外请求得体回复"},
+		{"# 通用约束（每片必读）\n## 工作区\n- x\n# 任务：Example-1051 整行一个点击目标\n", "Example-1051 整行一个点击目标"},
+		{"## Shared constraints (same for every slice)\n- no secrets\n\n## Acceptance commands\ngo test ./...\n\n# Fix refresh ordering\nbody\n", "Fix refresh ordering"},
+		{"# H5 回归修复 B\n# 通用约束（每片必读）\n- x\n", "H5 回归修复 B"},
+		{"# 通用约束\n```sh\n# run the suite\ngo test ./...\n```\n# Real title\n", "Real title"},
+		{"## 通用约束（所有片相同）\n- 仓库：Example\n", "通用约束（所有片相同）"},
+	} {
+		if got := briefSummary(tc.brief); got != tc.want {
+			t.Errorf("briefSummary(%q)=%q, want %q", tc.brief, got, tc.want)
+		}
+	}
+}
+
 func TestActionableWarningsIgnoresInformationalNotes(t *testing.T) {
 	h, _ := Lookup("agy")
 	r := Result{Harness: "agy", Warnings: []string{h.Experimental, dirtyWorktreeWarning, "agy 2.2.0 has not been checked; run pactify sub doctor first"}}

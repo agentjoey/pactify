@@ -123,7 +123,59 @@ func cleanSummaryLine(line string) string {
 	return strings.Trim(strings.NewReplacer("**", "", "__", "", "`", "").Replace(clean), "*_ ")
 }
 
+// sharedSections label markdown sections that batches copy into every brief,
+// such as common constraints and acceptance commands.
+var sharedSections = []string{"通用约束", "共同约束", "公共约束", "全局约束", "约束", "通用规则", "验收命令", "constraints", "shared constraints", "common constraints", "general constraints", "acceptance commands"}
+
+// markdownHeading returns the level and text of an ATX heading line.
+func markdownHeading(line string) (int, string) {
+	line = strings.TrimSpace(line)
+	level := len(line) - len(strings.TrimLeft(line, "#"))
+	if level == 0 || level > 6 || (len(line) > level && line[level] != ' ' && line[level] != '\t') {
+		return 0, ""
+	}
+	return level, line[level:]
+}
+
+func sharedSection(heading string) bool {
+	text := cleanSummaryLine(heading)
+	if i := strings.IndexAny(text, "（("); i > 0 {
+		text = text[:i]
+	}
+	return slices.Contains(sharedSections, strings.ToLower(strings.TrimSpace(strings.TrimRight(text, ":："))))
+}
+
+// withoutSharedSections drops shared sections and their bodies up to the next
+// heading of the same or a higher level. A brief made only of shared sections
+// is returned unchanged.
+func withoutSharedSections(brief string) string {
+	var kept []string
+	skipLevel := 0
+	inFence := false
+	for line := range strings.SplitSeq(brief, "\n") {
+		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			inFence = !inFence
+		} else if level, text := markdownHeading(line); level > 0 && !inFence {
+			if skipLevel > 0 && level <= skipLevel {
+				skipLevel = 0
+			}
+			if skipLevel == 0 && sharedSection(text) {
+				skipLevel = level
+			}
+		}
+		if skipLevel == 0 {
+			kept = append(kept, line)
+		}
+	}
+	rest := strings.Join(kept, "\n")
+	if strings.TrimSpace(rest) == "" {
+		return brief
+	}
+	return rest
+}
+
 func briefSummary(brief string) string {
+	brief = withoutSharedSections(brief)
 	first := ""
 	for line := range strings.SplitSeq(brief, "\n") {
 		clean := cleanSummaryLine(line)

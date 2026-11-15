@@ -1,10 +1,10 @@
 # Pactify — Architecture
 
-> Current release: **v0.13.0**. See [CHANGELOG](CHANGELOG.md).
+> Current release: **v0.15.0**. See [CHANGELOG](CHANGELOG.md).
 
 Pactify is a local harness router. The CLI and Claude Code plugin delegate tasks
-to codex (default), kimi, agy, opencode and experimental dsh. Jobs, results and worktrees are managed
-locally.
+to codex (default), kimi and opencode, with experimental agy and dsh support. Jobs,
+results and worktrees are managed locally.
 
 ## Components
 
@@ -20,8 +20,10 @@ locally.
 | `web/` | Vite + React + Tailwind v4 sources, unit tests and Playwright e2e |
 | `plugins/pactify` | Claude Code delegation skills, forwarding agents and job inspection |
 | `internal/vendorenv`, `credentiallinks`, `gitx`, `lockx`, `testenv` | Harness environment, credential links, repository reads, locking and test fixtures |
+| `internal/buildinfo` | Shares the CLI release version with the read-only panel |
+| `internal/plugingen` | Generates the plugins and skills under `plugins/` from `plugins/src/` |
 
-There are **11 top-level internal packages**. The plugin invokes the CLI; the
+There are **13 top-level internal packages**. The plugin invokes the CLI; the
 web dashboard consumes only `/api/sub`. Both web builds are tracked under
 `internal/serve/dist` and `internal/subpanel/dist` and embedded into the Go binary.
 

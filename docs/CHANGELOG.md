@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `pactify sub prune` names the entry that makes it protect every job. When an unreadable
+  job, a job directory without `state.json` or a symlink in `jobs/` blocks deletion, the
+  reason now says which entry and why, instead of a generic ownership message.
+- The vendored Codex app-server schema is regenerated from codex 0.169.0, and the opencode
+  2.x contract baseline moves to 2.3.0 after reviewing the changes: new optional query
+  parameters and narrower 404 error unions only, nothing Pactify consumes was removed.
+
 ## v0.15.0 — 2026-11-07
 
 DeepSeek Harness (dsh) joins as an experimental harness; the Jobs dashboard is restyled

@@ -11,13 +11,13 @@ a package's `latest` tag alone does not reveal a migration to a new package.
 | --- | --- | --- | --- |
 | codex | npm `@openai/codex` | `internal/cockpit/codexschema/CODEX_VERSION` | `codex-schema.yml`: latest schema fields |
 | kimi | npm `@moonshot-ai/kimi-code` | `internal/cockpit/harnessdrift/versions.json` | `harness-drift.yml`: arguments and ACP handshake |
-| opencode | npm `opencode-ai` (1.x), `@opencode/cli` (2.x) | `versions.json`: 1.19.0 / 2.1.0 | `opencode-api.yml`: pinned and latest OpenAPI contracts for both channels |
+| opencode | npm `opencode-ai` (1.x), `@opencode/cli` (2.x) | `versions.json`: 1.19.0 / 2.3.0 | `opencode-api.yml`: pinned and latest OpenAPI contracts for both channels |
 | agy | Installer manifest | `versions.json` | `harness-drift.yml`: arguments and stream events |
 
 Opencode is supported on both majors; agy remains experimental. Opencode 1.x
 stays supported while `opencode-ai` still publishes 1.x releases and the v1
 drift/contract check stays green. Opencode 2.x is pinned by the reviewed contract
-(currently 2.1.0), with pinned and latest probes checking consumed fields. A new
+(currently 2.3.0), with pinned and latest probes checking consumed fields. A new
 major or contract drift requires review before updating that pin.
 
 Local doctor verification is recorded in `$PACTIFY_HOME/verified-versions.json`.

@@ -611,3 +611,54 @@ func TestStorageJobSessionBytesAndDoctorSymlink(t *testing.T) {
 		t.Fatal("doctor followed symlinked cache root")
 	}
 }
+
+// A single entry that blocks every job deletion must be named in the reason, so
+// a protected job list is explainable without reading the storage code.
+func TestStorageBlockAllReasonNamesTheCause(t *testing.T) {
+	old := time.Now().Add(-60 * 24 * time.Hour)
+	cases := []struct {
+		name  string
+		setup func(t *testing.T, s Store)
+		want  []string
+	}{
+		{"missing state", func(t *testing.T, s Store) {
+			d := filepath.Join(s.Root, "stuck")
+			os.MkdirAll(d, 0700)
+			os.WriteFile(filepath.Join(d, "brief.md"), []byte("x"), 0600)
+		}, []string{"jobs/stuck", "no state.json", "retention"}},
+		{"corrupt state", func(t *testing.T, s Store) {
+			d := filepath.Join(s.Root, "broken")
+			os.MkdirAll(d, 0700)
+			os.WriteFile(filepath.Join(d, "state.json"), []byte("{bad"), 0600)
+		}, []string{"jobs/broken", "state.json"}},
+		{"id mismatch", func(t *testing.T, s Store) {
+			d := filepath.Join(s.Root, "mismatch")
+			os.MkdirAll(d, 0700)
+			os.WriteFile(filepath.Join(d, "state.json"), []byte(`{"id":"other"}`), 0600)
+		}, []string{"jobs/mismatch", "does not match"}},
+		{"stray symlink", func(t *testing.T, s Store) {
+			os.Symlink(t.TempDir(), filepath.Join(s.Root, "latest"))
+		}, []string{"jobs/latest", "symlink"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := storageStore(t)
+			storageJob(t, s, "healthy", StatusSucceeded, 30*24*time.Hour)
+			tc.setup(t, s)
+			os.Chtimes(filepath.Join(s.Root, "healthy"), old, old)
+			p, err := s.PlanStorage(context.Background(), PruneOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			i := storageItem(p, "jobs/healthy")
+			if i == nil || !i.Protected {
+				t.Fatalf("healthy job must stay protected while the cause exists: %+v", i)
+			}
+			for _, w := range tc.want {
+				if !strings.Contains(i.Reason, w) {
+					t.Fatalf("reason %q does not mention %q", i.Reason, w)
+				}
+			}
+		})
+	}
+}

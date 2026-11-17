@@ -490,7 +490,18 @@ func (s Store) planStorage(ctx context.Context, r *os.Root, opts PruneOptions, n
 	uncertain := false
 	blockAll := false
 	rawProtected := map[string]bool{}
-	unreadableReferences := []map[string]bool{}
+	type unreadableJob struct {
+		why  string
+		refs map[string]bool
+	}
+	unreadableJobs := []unreadableJob{}
+	// Every condition that protects all jobs records what caused it, so the
+	// plan can name the entry that has to be repaired or removed.
+	blockCauses := []string{}
+	block := func(why string) {
+		blockAll = true
+		blockCauses = append(blockCauses, why)
+	}
 	entries, err := storageEntries(r, filepath.Base(s.Root))
 	if err != nil && !os.IsNotExist(err) {
 		return p, err
@@ -502,7 +513,7 @@ func (s Store) planStorage(ctx context.Context, r *os.Root, opts PruneOptions, n
 	for _, entry := range entries {
 		if walkCtx.Err() != nil || scan.remaining < 0 {
 			uncertain = true
-			blockAll = true
+			block("job inventory scan budget exceeded")
 			p.Failures = append(p.Failures, "job inventory scan budget exceeded")
 			break
 		}
@@ -513,7 +524,7 @@ func (s Store) planStorage(ctx context.Context, r *os.Root, opts PruneOptions, n
 			if entry.Type()&os.ModeSymlink != 0 {
 				p.Locations[0].Items = append(p.Locations[0].Items, StorageItem{Path: rel, Protected: true, Reason: "symlink protected"})
 				uncertain = true
-				blockAll = true
+				block(rel + " is a symlink")
 			}
 			continue
 		}
@@ -528,11 +539,15 @@ func (s Store) planStorage(ctx context.Context, r *os.Root, opts PruneOptions, n
 				p.Locations[0].Items = append(p.Locations[0].Items, StorageItem{Path: rel, Protected: true, Reason: "crash leftover without job state; one-hour creation grace elapsed"})
 				continue
 			}
+			why := rel + " state.json cannot be read: " + e.Error()
+			if os.IsNotExist(e) {
+				why = rel + " has no state.json and is newer than retention"
+			}
 			refs, refErr := storageRawReferences(r, filepath.Join(rel, "state.json"), id, existing)
 			if refErr != nil || len(refs) == 0 {
-				blockAll = true
+				block(why)
 			}
-			unreadableReferences = append(unreadableReferences, refs)
+			unreadableJobs = append(unreadableJobs, unreadableJob{why, refs})
 			uncertain = true
 			p.Failures = append(p.Failures, rel+": "+e.Error())
 			reasons[id] = "job state cannot be verified"
@@ -579,24 +594,25 @@ func (s Store) planStorage(ctx context.Context, r *os.Root, opts PruneOptions, n
 	}
 	// Only verified states identify existing chains. Store metadata files and
 	// crash leftovers cannot make an unreadable job's ownership look bounded.
-	for _, refs := range unreadableReferences {
+	for _, u := range unreadableJobs {
 		bounded := false
-		for ref := range refs {
+		for ref := range u.refs {
 			if _, ok := states[ref]; ok {
 				rawProtected[ref] = true
 				bounded = true
 			}
 		}
 		if !bounded {
-			blockAll = true
+			block(u.why)
 		}
 	}
 	for id := range rawProtected {
 		reasons[id] = "unreadable job may reference this chain"
 	}
 	if blockAll {
+		why := "all job deletions protected: " + blockCausesText(blockCauses)
 		for _, item := range p.Locations[0].Items {
-			reasons[filepath.Base(item.Path)] = "unreadable job ownership cannot be bounded; all job deletions protected"
+			reasons[filepath.Base(item.Path)] = why
 		}
 	}
 	// Union explicit resume/fallback/worktree relations and reused native sessions.
@@ -1782,6 +1798,23 @@ func storageRawReferences(r *os.Root, path, own string, existing map[string]bool
 		}
 	}
 	return refs, nil
+}
+
+// blockCausesText names up to three entries that block every job deletion.
+func blockCausesText(causes []string) string {
+	seen := map[string]bool{}
+	uniq := []string{}
+	for _, c := range causes {
+		if !seen[c] {
+			seen[c] = true
+			uniq = append(uniq, c)
+		}
+	}
+	sort.Strings(uniq)
+	if len(uniq) > 3 {
+		return strings.Join(uniq[:3], "; ") + fmt.Sprintf("; +%d more", len(uniq)-3)
+	}
+	return strings.Join(uniq, "; ")
 }
 
 // A short creation grace protects jobs between Mkdir and Save. Empty/lock-only

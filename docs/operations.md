@@ -133,7 +133,11 @@ executable check. Agy retry receipts live in `storage-receipts/agy.json`, outsid
 mirrored homes; existing receipts migrate on use.
 
 Unreadable job state protects every chain whose IDs can be recovered from its raw
-metadata. Without recoverable references, all job deletions are protected. Shared
+metadata. Without recoverable references, all job deletions are protected, and
+the protection reason names the entry that caused it: a job directory without
+`state.json` that is newer than retention, an unreadable or mismatched
+`state.json`, or a symlink in `jobs/`. Repair or remove that entry and run
+`pactify sub prune` again. Shared
 storage remains protected when a running job cannot be ruled out. Empty or
 lock-only crash directories stop blocking shared cleanup after a one-hour grace;
 they remain visible and age out under retention. Orphan trash markers also expire

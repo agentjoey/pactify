@@ -61,6 +61,8 @@ func doctorFailureClassification(name string) DoctorCheck {
 		raw = json.RawMessage(`{"error":{"code":"provider.connection_error","message":"Connection error."}}`)
 	case "agy":
 		message = "UNAVAILABLE (code 503)"
+	case "cursor":
+		message = "Connection error"
 	default:
 		return DoctorCheck{"Failure classification", "SKIP", "not applicable: test harness has no vendor classifier"}
 	}

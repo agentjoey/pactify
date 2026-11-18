@@ -35,6 +35,9 @@ var ownKeys = map[string][]string{
 	// model. dsh-sdk stays model-agnostic at the worker boundary so explicit
 	// provider/model selections retain their provider credentials.
 	"dsh-official": {},
+	// Cursor authenticates with its own login, CURSOR_API_KEY or CURSOR_AUTH_TOKEN,
+	// none of which are in APIKeys, so every sibling vendor key is blanked.
+	"cursor-agent": {},
 	"claude-code":  {"ANTHROPIC_API_KEY"},
 	"codex-cli":    {"OPENAI_API_KEY"},
 	"kimi-cli":     {"MOONSHOT_API_KEY", "KIMI_API_KEY"},

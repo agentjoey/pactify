@@ -453,6 +453,14 @@ func parseLoadSession(caps json.RawMessage) bool {
 	return c.LoadSession
 }
 
+// Authenticate selects one of the authentication methods advertised by
+// initialize. An agent that already holds credentials answers at once; callers
+// must bound ctx because an agent without credentials may never reply.
+func (c *Client) Authenticate(ctx context.Context, methodID string) error {
+	_, err := c.call(ctx, "authenticate", map[string]any{"methodId": methodID})
+	return err
+}
+
 // NewSession creates a fresh session rooted at cwd and returns its id. cwd also
 // becomes the client's default working directory for a later LoadSession.
 func (c *Client) NewSession(ctx context.Context, cwd string) (SessionID, error) {
@@ -779,6 +787,7 @@ func (c *Client) dispatchUpdate(u SessionUpdate) {
 // keeps draining, then replies with the outcome.
 func (c *Client) handleServerRequest(id json.RawMessage, method string, params json.RawMessage) {
 	if method != "session/request_permission" {
+		c.replyExtension(id, method)
 		return
 	}
 	var p struct {
@@ -806,6 +815,24 @@ func (c *Client) handleServerRequest(id json.RawMessage, method string, params j
 		}
 		c.replyPermission(id, outcome)
 	}()
+}
+
+// replyExtension answers Cursor's blocking extension requests so the agent never
+// waits on a client that cannot ask a human. Requests from other agents stay
+// ignored, as before.
+func (c *Client) replyExtension(id json.RawMessage, method string) {
+	frame := map[string]any{"jsonrpc": "2.0", "id": id}
+	switch {
+	case method == "cursor/ask_question" || method == "cursor/create_plan":
+		frame["result"] = map[string]any{"outcome": map[string]any{"outcome": "cancelled"}}
+	case strings.HasPrefix(method, "cursor/"):
+		frame["error"] = map[string]any{"code": -32601, "message": "method not supported by pactify: " + method}
+	default:
+		return
+	}
+	if b, err := json.Marshal(frame); err == nil {
+		_ = c.write(b)
+	}
 }
 
 // replyPermission writes the response to a permission request with the same id.

@@ -132,7 +132,7 @@ func (c *harnessCatalog) persist(s Store) {
 }
 
 func (c *harnessCatalog) executable(name string) (executableStamp, bool) {
-	path, err := c.lookupPath(name)
+	path, err := lookupHarnessPath(name, c.lookupPath)
 	if err != nil {
 		return executableStamp{}, false
 	}

@@ -207,6 +207,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			if h.Name == "dsh" {
 				installErr = fmt.Errorf("%w; install with npm install -g @deepseek-ai/dsh", installErr)
 			}
+			if h.Name == "cursor" {
+				installErr = fmt.Errorf("%w; %s", installErr, cursorInstallHint)
+			}
 			add("Installed", false, installErr.Error())
 			for _, name := range []string{"Write access", "Model", "Read-only access", "Network", "Session hiding"} {
 				skip(name, "CLI unavailable; not run")
@@ -232,7 +235,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 		}
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
-		network := h.Name == "dsh" || h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
+		network := h.Name == "dsh" || h.Name == "cursor" || h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
 		model := ""
 		if h.Name == "agy" {
 			// Agy requires an explicit model to select its supported flash probe profile.
@@ -269,7 +272,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		// Explicit models follow RunJob's backend validation, just like sub run.
 		// In particular, agy can proceed when its catalog pre-check is unavailable.
 		// Native defaults need no catalog lookup; opencode uses its configured default before heuristics.
-		if d.model == "" && h.Name != "codex" && h.Name != "kimi" && (h.DoctorModel == "" && model == "" || h.Name == "agy") && h.Models != nil {
+		if d.model == "" && h.Name != "codex" && h.Name != "kimi" && h.Name != "cursor" && (h.DoctorModel == "" && model == "" || h.Name == "agy") && h.Models != nil {
 			opts := cockpit.StartOpts{Env: vendorenv.Strip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
@@ -380,7 +383,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				writeReason += "; " + permissionErr.Error()
 			}
 		}
-		add("Write access", goodWrite && writePolicyOK && wrote && strings.TrimSpace(writable.FinalText) != "" && writable.InputTokens+writable.OutputTokens > 0, writeReason)
+		add("Write access", goodWrite && writePolicyOK && wrote && strings.TrimSpace(writable.FinalText) != "" && (h.Name == "cursor" || writable.InputTokens+writable.OutputTokens > 0), writeReason)
 		add("Model", goodWrite && writable.ModelVerified && writable.ModelActual != "" && (model == "" || writable.ModelActual == model), fmt.Sprintf("requested=%s, actual=%s, independently verified=%t", model, writable.ModelActual, writable.ModelVerified))
 		results := []Result{writable}
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded

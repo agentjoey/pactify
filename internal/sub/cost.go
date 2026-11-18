@@ -124,7 +124,7 @@ func (t *CostTotals) add(r costResult, harness string) {
 		t.CostReportedJobs++
 	} else {
 		switch harness {
-		case "codex", "kimi", "agy", "dsh":
+		case "codex", "kimi", "agy", "dsh", "cursor":
 			t.SubscriptionJobs++
 		default:
 			t.UnpricedJobs++

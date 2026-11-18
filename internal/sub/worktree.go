@@ -276,6 +276,9 @@ func (s Store) resumeRunLocked(id string, req Request, isolated bool, previous S
 		if err := s.worktreeIdle(w); err != nil {
 			return err
 		}
+		if err := ensureWorktreeLink(w); err != nil {
+			return err
+		}
 		root, err := repositoryRoot(w.Cwd)
 		if err != nil {
 			return fmt.Errorf("worktree no longer exists; cannot resume: %w", err)
@@ -452,6 +455,9 @@ type worktreeChange struct {
 }
 
 func worktreeChanges(w *Worktree, includePatch bool) (change worktreeChange, err error) {
+	if err = ensureWorktreeLink(w); err != nil {
+		return change, err
+	}
 	f, err := os.CreateTemp("", "pactify-sub-index-*")
 	if err != nil {
 		return change, err
@@ -612,6 +618,8 @@ func (s Store) DiscardWorktreeNotes(id string) ([]string, error) {
 			}
 			related = append(related, st)
 		}
+		// Repair first: git refuses to remove a worktree whose link is broken.
+		linkErr := ensureWorktreeLink(w)
 		gitDir, note := worktreeRepository(w)
 		if note != "" {
 			notes = append(notes, note)
@@ -625,6 +633,9 @@ func (s Store) DiscardWorktreeNotes(id string) ([]string, error) {
 			// git also removes registrations for a worktree whose directory was
 			// deleted externally. Never prune other jobs' worktrees.
 			if _, statErr := os.Lstat(w.Path); !os.IsNotExist(statErr) {
+				if linkErr != nil {
+					return linkErr
+				}
 				return err
 			}
 			list, listErr := runGit(gitDir, "worktree", "list", "--porcelain", "-z")

@@ -148,6 +148,13 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 		result.describeWorktree(*st)
 	}
 	if st.Worktree != nil && !st.Worktree.Discarded {
+		if err := ensureWorktreeLink(st.Worktree); err != nil {
+			result.Warnings = append(result.Warnings, err.Error())
+			if result.Status == StatusSucceeded {
+				result.Status = StatusFailed
+				reason = err.Error()
+			}
+		}
 		warnings, err := s.collectWorktreeWarnings(st)
 		result.Warnings = append(result.Warnings, warnings...)
 		if err != nil {

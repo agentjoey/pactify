@@ -17,6 +17,7 @@ COCKPIT = HERE.parent
 VERSIONS = json.loads((HERE / 'versions.json').read_text())
 FLAGS = {
     'kimi': ['--version', '--help'],
+    'cursor': ['--version', '--help'],
     'agy': ['--input-format', '--output-format', '--mode', '--conversation',
             '--model', '--effort', '--print-timeout', '--dangerously-skip-permissions'],
 }
@@ -55,6 +56,14 @@ def check_constants(binary):
 
 
 def static_check():
+    if not re.fullmatch(r'\d{4}\.\d{1,2}\.\d{1,2}-[0-9a-f]{6,}', VERSIONS['cursor']):
+        raise ValueError('invalid cursor contract baseline')
+    cursor = (COCKPIT / 'cursor.go').read_text()
+    for marker in ('[]string{"acp"}', '"cursor_login"', '"ask"', '"cursor-agent", "agent"'):
+        if marker not in cursor:
+            raise ValueError(f'cursor adapter lost {marker}')
+    if '"cursor/ask_question"' not in (COCKPIT.parent / 'acp' / 'acp.go').read_text():
+        raise ValueError('cursor extension replies are missing from the ACP client')
     if not re.fullmatch(r'0\.2\.1(?:-[0-9A-Za-z.-]+)?', VERSIONS['dsh']):
         raise ValueError('invalid dsh SDK contract baseline')
     dsh = (COCKPIT / 'dsh.go').read_text()
@@ -87,7 +96,7 @@ def run(args, env, cwd):
     return subprocess.check_output(args, env=env, cwd=cwd, stderr=subprocess.STDOUT, timeout=25, text=True)
 
 
-def initialize(command, env, cwd):
+def initialize(command, env, cwd, check=check_initialize):
     process = subprocess.Popen([command, 'acp'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL, env=env, cwd=cwd, start_new_session=True)
     try:
@@ -107,7 +116,7 @@ def initialize(command, env, cwd):
                     break
                 response = json.loads(line)
                 if response.get('id') == 1:
-                    check_initialize(response)
+                    check(response)
                     return
         raise ValueError('ACP initialize did not return a matching response within 25 seconds')
     finally:
@@ -121,8 +130,15 @@ def initialize(command, env, cwd):
         process.stdout.close()
 
 
+def check_cursor_handshake(response):
+    check_initialize(response)
+    methods = [m.get('id') for m in response['result'].get('authMethods', [])]
+    if 'cursor_login' not in methods:
+        raise ValueError(f'cursor ACP no longer advertises cursor_login: {methods}')
+
+
 def live_check(harness):
-    command = shutil.which(harness)
+    command = shutil.which('cursor-agent' if harness == 'cursor' else harness)
     if command is None:
         summary(f'SKIP {harness}: CLI unavailable on this runner; install step failed or no supported distribution. Live drift was not checked.')
         return
@@ -141,7 +157,12 @@ def live_check(harness):
             raise ValueError(f'unrecognized {harness} version: {version}')
         summary(version_message(harness, match.group()))
         check_help(harness, run([command, '--help'] + extra, env, root))
-        if harness == 'kimi':
+        if harness == 'cursor':
+            if 'ACP' not in run([command, 'acp', '--help'], env, root):
+                raise ValueError('cursor no longer provides the acp command')
+            initialize(command, env, root, check_cursor_handshake)
+            summary('PASS cursor: help and unauthenticated ACP initialize with cursor_login; no session or prompt created.')
+        elif harness == 'kimi':
             if not re.search(r'\bacp\b', run([command, '--help'], env, root)):
                 raise ValueError('kimi help no longer advertises acp')
             session_help = run([command, 'session', 'list', '--help'], env, root)
@@ -158,7 +179,7 @@ def live_check(harness):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--static', action='store_true')
-    parser.add_argument('--harness', choices=('kimi', 'agy'))
+    parser.add_argument('--harness', choices=('kimi', 'agy', 'cursor'))
     args = parser.parse_args()
     static_check()
     if args.harness:

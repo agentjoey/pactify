@@ -46,14 +46,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        harness: [kimi, agy]
+        harness: [kimi, agy, cursor]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
       # Official installers: https://moonshotai.github.io/kimi-code/
-      # https://antigravity.google/docs/cli/install/
+      # https://antigravity.google/docs/cli/install/ https://cursor.com/cli
       - name: Install latest CLI in disposable HOME
         id: install
         continue-on-error: true
@@ -65,6 +65,10 @@ jobs:
           if [ "$HARNESS" = kimi ]; then
             npm install --prefix "$HOME/package" @moonshot-ai/kimi-code@latest
             echo "$HOME/package/node_modules/.bin" >> "$GITHUB_PATH"
+          elif [ "$HARNESS" = cursor ]; then
+            curl --fail --silent --show-error --location --max-time 60 https://cursor.com/install -o "$HOME/install.sh"
+            bash "$HOME/install.sh"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           else
             curl --fail --silent --show-error --location --max-time 60 https://antigravity.google/cli/install.sh -o "$HOME/install.sh"
             bash "$HOME/install.sh"

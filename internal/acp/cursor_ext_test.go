@@ -32,11 +32,14 @@ func TestClientAnswersCursorExtensionRequests(t *testing.T) {
 		}
 		return m
 	}
-	for id, method := range map[int]string{1: "cursor/ask_question", 2: "cursor/create_plan", 3: "cursor/task"} {
-		send(map[string]any{"jsonrpc": "2.0", "id": id, "method": method, "params": map[string]any{}})
-	}
-	// A request from another agent keeps its existing behavior: no reply.
-	send(map[string]any{"jsonrpc": "2.0", "id": 4, "method": "fs/read_text_file", "params": map[string]any{}})
+	// The pipes are unbuffered, so the server sends while the test reads replies.
+	go func() {
+		for id, method := range map[int]string{1: "cursor/ask_question", 2: "cursor/create_plan", 3: "cursor/task"} {
+			send(map[string]any{"jsonrpc": "2.0", "id": id, "method": method, "params": map[string]any{}})
+		}
+		// A request from another agent keeps its existing behavior: no reply.
+		send(map[string]any{"jsonrpc": "2.0", "id": 4, "method": "fs/read_text_file", "params": map[string]any{}})
+	}()
 	replies := map[int]map[string]any{}
 	for range 3 {
 		m := read()

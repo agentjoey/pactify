@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `pactify sub run --resume` now treats a cwd that differs only in letter case (macOS
+  volumes) as the same directory throughout. The resumed job keeps the original cwd
+  spelling that the harness created its session in, and the per-session resume lock
+  and the dashboard's resume grouping resolve the on-disk case instead of the typed
+  case, so two spellings no longer bypass each other's locks.
 - `pactify sub prune` names the entry that makes it protect every job. When an unreadable
   job, a job directory without `state.json` or a symlink in `jobs/` blocks deletion, the
   reason now says which entry and why, instead of a generic ownership message.

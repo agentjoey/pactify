@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/agentjoey/pactify/internal/procx"
 )
@@ -189,7 +190,50 @@ func canonicalResumeCwd(cwd string) string {
 	if resolved, err := filepath.EvalSymlinks(cwd); err == nil {
 		cwd = resolved
 	}
-	return filepath.Clean(cwd)
+	return filepath.Clean(trueCaseDirectory(cwd))
+}
+
+// trueCaseDirectory rewrites each component of an absolute path to the spelling
+// stored on disk. EvalSymlinks keeps the caller's case, so on case-insensitive
+// volumes two spellings of one directory would otherwise get different keys. A
+// component is only renamed when the directory entry is the same file, so
+// case-sensitive filesystems are left alone.
+func trueCaseDirectory(path string) string {
+	volume := filepath.VolumeName(path)
+	rest := strings.TrimPrefix(path[len(volume):], string(filepath.Separator))
+	current := volume + string(filepath.Separator)
+	for _, name := range strings.Split(rest, string(filepath.Separator)) {
+		if name == "" {
+			continue
+		}
+		current = filepath.Join(current, trueCaseName(current, name))
+	}
+	return current
+}
+
+func trueCaseName(parent, name string) string {
+	want, err := os.Lstat(filepath.Join(parent, name))
+	if err != nil {
+		return name
+	}
+	entries, err := os.ReadDir(parent)
+	if err != nil {
+		return name
+	}
+	for _, entry := range entries {
+		if entry.Name() == name {
+			return name
+		}
+	}
+	for _, entry := range entries {
+		if !strings.EqualFold(entry.Name(), name) {
+			continue
+		}
+		if got, err := os.Lstat(filepath.Join(parent, entry.Name())); err == nil && os.SameFile(want, got) {
+			return entry.Name()
+		}
+	}
+	return name
 }
 
 func (s Store) actionIndex(st State) (*SummaryIndex, error) {

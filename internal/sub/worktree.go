@@ -66,6 +66,9 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		if session == "" {
 			return State{}, &NoSessionError{Harness: req.Harness}
 		}
+		// Native sessions are keyed by the cwd they were created in; keep that
+		// spelling when the lookup matched through a case or symlink alias.
+		req.Cwd = previous.Request.Cwd
 		return s.resumeRun(id, req, isolated, previous, session)
 	}
 	root, err := repositoryRoot(req.Cwd)

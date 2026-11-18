@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -40,28 +41,42 @@ var ErrReadOnlyUnenforceable = errors.New("cursor did not offer its read-only as
 
 type cursorBinary struct{ path, version string }
 
+// Verified binaries are remembered per executable identity (resolved path, size
+// and modification time), so a self-update that swaps the target is probed again.
 var cursorBinaries = struct {
 	sync.Mutex
-	byPath map[string]cursorBinary
-}{byPath: map[string]cursorBinary{}}
+	byIdentity map[string]cursorBinary
+}{byIdentity: map[string]cursorBinary{}}
+
+func cursorIdentity(candidate string) string {
+	resolved, err := filepath.EvalSymlinks(candidate)
+	if err != nil {
+		resolved = candidate
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return resolved
+	}
+	return fmt.Sprintf("%s|%d|%d", resolved, info.Size(), info.ModTime().UnixNano())
+}
 
 // ResolveCursorBinary finds Cursor's CLI. The legacy name cursor-agent is tried
 // first; the newer name agent is accepted only after its help text identifies
 // Cursor, because other CLIs use that name too. Probes run with a throwaway
 // CURSOR_CONFIG_DIR so discovery never writes into the user's configuration.
 func ResolveCursorBinary(ctx context.Context) (path, version string, err error) {
-	key := os.Getenv("PATH")
-	cursorBinaries.Lock()
-	cached, ok := cursorBinaries.byPath[key]
-	cursorBinaries.Unlock()
-	if ok {
-		return cached.path, cached.version, nil
-	}
 	var notes []string
 	for _, name := range []string{"cursor-agent", "agent"} {
 		candidate, lookErr := exec.LookPath(name)
 		if lookErr != nil {
 			continue
+		}
+		identity := name + "|" + cursorIdentity(candidate)
+		cursorBinaries.Lock()
+		cached, ok := cursorBinaries.byIdentity[identity]
+		cursorBinaries.Unlock()
+		if ok {
+			return cached.path, cached.version, nil
 		}
 		version, probeErr := probeCursorBinary(ctx, candidate, name == "agent")
 		if probeErr != nil {
@@ -69,7 +84,7 @@ func ResolveCursorBinary(ctx context.Context) (path, version string, err error) 
 			continue
 		}
 		cursorBinaries.Lock()
-		cursorBinaries.byPath[key] = cursorBinary{candidate, version}
+		cursorBinaries.byIdentity[identity] = cursorBinary{candidate, version}
 		cursorBinaries.Unlock()
 		return candidate, version, nil
 	}

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Worktree jobs repair a `.git` link file that the harness deleted or corrupted. Pactify
+  rewrites the link from the repository's own worktree record when the job finishes and
+  before apply, discard and resume, so the changes can still be reviewed and applied.
+  Worktree files are never modified. If the link cannot be restored (the repository no
+  longer lists the worktree, the original repository is gone, or `.git` became a
+  directory), the error names the worktree and the manual recovery step.
+- `pactify sub run --resume` now treats a cwd that differs only in letter case (macOS
+  volumes) as the same directory throughout. The resumed job keeps the original cwd
+  spelling that the harness created its session in, and the per-session resume lock
+  and the dashboard's resume grouping resolve the on-disk case instead of the typed
+  case, so two spellings no longer bypass each other's locks.
 - `pactify sub prune` names the entry that makes it protect every job. When an unreadable
   job, a job directory without `state.json` or a symlink in `jobs/` blocks deletion, the
   reason now says which entry and why, instead of a generic ownership message.

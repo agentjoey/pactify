@@ -62,6 +62,12 @@ check; a model's verbal claim is insufficient. Codex write mode enables network
 access for dependency downloads and tests. Codex and agy read-only probes must
 actually invoke tools; claiming that a write was denied does not pass.
 
+Cursor uses the generic read-only probe: a write the model attempts in ask mode must leave no
+file. A model that never attempts the write leaves the check inconclusive (WARN). Cursor may
+report no token counts, so the write probe does not require them; the Model check still needs
+the session to report its model. Doctor skips model listing and uses Cursor's own default, and
+reports the Sandbox check as WARN because there is no OS sandbox.
+
 Kimi read-only probes must succeed, leave `probe.txt` absent, and have every
 agent's `llm.tools_snapshot` within the generated private config's tool allowlist:
 Read, Grep, Glob, ReadMediaFile, TodoList, TaskList, TaskOutput and WaitFor.
@@ -167,7 +173,7 @@ See [status](sub-status.md), [routing](router.md) and
 [upstream compatibility](harness-updates.md). Live test coverage and its limits
 are described in the [E2E guide](../internal/sub/e2e/README.md).
 
-Opencode 1.x and 2.x are supported; agy remains experimental. Promotion does not
+Opencode 1.x and 2.x are supported; agy, dsh and cursor remain experimental. Promotion does not
 change the Sandbox check: opencode still reports WARN because it has no OS
 sandbox. Write probes retain the file-tool directory guard checks; shell commands
 are not confined. See [support policy](harness-updates.md) for version contracts.

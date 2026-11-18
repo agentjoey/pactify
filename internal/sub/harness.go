@@ -28,8 +28,25 @@ func harnessInstalled(name string, lookPath func(string) (string, error)) error 
 	if os.Getenv("PACTIFY_SUB_FAKE") == "1" && (name == "fake" || name == "codex" && os.Getenv("PACTIFY_SUB_FAKE_CODEX") == "1") {
 		return nil
 	}
-	_, err := lookPath(name)
+	_, err := lookupHarnessPath(name, lookPath)
 	return err
+}
+
+// lookupHarnessPath finds a harness executable. Cursor installs two names,
+// the legacy cursor-agent and the generic agent; the first is preferred and the
+// second is confirmed by cockpit.ResolveCursorBinary before any job uses it.
+func lookupHarnessPath(name string, lookPath func(string) (string, error)) (string, error) {
+	if name != "cursor" {
+		return lookPath(name)
+	}
+	path, err := lookPath("cursor-agent")
+	if err != nil {
+		path, err = lookPath("agent")
+	}
+	if err != nil {
+		return "", fmt.Errorf("neither cursor-agent nor agent found: %w", err)
+	}
+	return path, nil
 }
 
 type Harness struct {
@@ -105,6 +122,17 @@ type ConcealContext struct {
 }
 
 var registry = map[string]Harness{
+	"cursor": {
+		Name: "cursor", Kind: cockpit.CursorKind, Backend: cockpit.NewCursorBackend,
+		Version:      cockpit.CursorVersion,
+		Experimental: "cursor is experimental: no OS sandbox for writes; permission requests are approved by pactify; read-only relies on Cursor's ask mode, denied permission requests and a workspace check; results vary by model",
+		// Effort belongs to Cursor's parameterized model id, so there is no separate effort value.
+		MinimalConfig: true,
+		Home:          &harnessHome{Env: "CURSOR_CONFIG_DIR", Source: cursorConfigDir, Managed: managedCursorHome, Layout: cursorHome, Doctor: doctorCursorHome},
+		Models:        cockpit.CursorModels, ModelDetails: cockpit.CursorModelDetails,
+		Verify:  verifyCursor,
+		Conceal: concealCursor,
+	},
 	"dsh": {
 		Name: "dsh", Kind: "dsh-sdk", Backend: cockpit.NewDSHBackend,
 		Version: cliVersion("dsh", "DSH_TELEMETRY_DISABLED=1"), Supported: dshSupported,

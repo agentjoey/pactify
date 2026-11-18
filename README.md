@@ -47,11 +47,11 @@ with `pactify sub doctor <harness>`; see [doctor](docs/sub-doctor.md).
 ```
 
 Use `/delegate` (or `/pactify:delegate`) for default codex delegation, or select
-`/delegate-codex`, `/delegate-kimi`, `/delegate-agy` or `/delegate-opencode`. `/jobs` (or `/pactify:jobs`) is read-only:
+`/delegate-codex`, `/delegate-kimi`, `/delegate-agy`, `/delegate-opencode`, `/delegate-dsh` or `/delegate-cursor`. `/jobs` (or `/pactify:jobs`) is read-only:
 `/jobs all` includes older jobs and `/jobs <id>` shows one job. Read the
 [plugin guide](plugins/pactify/README.md) for brief writing and result review.
 The plugin is for Claude Code only. Delegation requires an explicit user request;
-the experimental agy skill runs only through its slash command. The supported
+the experimental agy, dsh and cursor skills run only through their slash commands. The supported
 opencode skill, like kimi, can be invoked by the model only on an explicit user
 request to delegate.
 
@@ -121,7 +121,7 @@ server) inherits the marker; open a fresh terminal instead.
 Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
 [job status](docs/sub-status.md) and [cost reporting](docs/sub-cost.md).
 
-codex is the default; kimi and opencode are supported, and agy is experimental. Kimi read-only jobs use a
+codex is the default; kimi and opencode are supported, and agy, dsh and cursor are experimental. Kimi read-only jobs use a
 generated private config with an execution-time tool allowlist, snapshot verification
 for every agent, and a fail-closed repository baseline. Shell, writes, sub-agents,
 cron, MCP and network tools are unavailable. Use `kimi --read-only` for reviews;
@@ -141,6 +141,8 @@ permission checks are a guardrail, not isolation. Experimental harness results v
 | opencode 1.x (`opencode-ai`) | Supported while `opencode-ai` still publishes 1.x releases and the v1 drift/contract check stays green |
 | opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.1.0) |
 | agy | Experimental |
+| dsh | Experimental |
+| cursor | Experimental |
 
 See [upstream compatibility](docs/harness-updates.md) for contract checks and evaluation gates.
 
@@ -198,3 +200,12 @@ preview: the OS sandbox confines files and shell; network is not sandboxed.
 Linked worktrees cannot git add/commit because git metadata lies outside the workspace;
 Pactify still collects the diff. Minimal config isolates sessions in a managed DSH_HOME;
 `--with-user-config` keeps them visible. Telemetry is disabled in both modes.
+
+Experimental Cursor support drives the Cursor CLI over ACP (`agent acp`, or the legacy
+`cursor-agent`). Install it from [cursor.com/cli](https://cursor.com/cli) and log in with
+`agent login` or `CURSOR_API_KEY`; pactify never reads Cursor's credentials. Invoke
+`/delegate-cursor` or `/pactify:delegate-cursor`, or the `pactify:sub-cursor` forwarding
+agent. There is no OS sandbox: write permission requests are approved by pactify. Read-only
+uses Cursor's ask mode, denies every permission request and fails with `readonly_violation`
+if repository files change. Minimal config isolates chats in a private `CURSOR_CONFIG_DIR`;
+`--with-user-config` keeps them in your history. Quota exhaustion is detected from text only.

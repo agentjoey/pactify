@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Add experimental support for the Cursor CLI (`cursor`) over ACP: write, read-only, resume,
+  cancel and worktree jobs, model selection from the session's options, `pactify sub doctor`
+  checks, Routing settings, the `delegate-cursor` skill and `sub-cursor` agent (plugin 0.8.0),
+  and weekly upstream drift checks. The binary is found as `cursor-agent` first, then `agent`
+  once its help identifies Cursor. Minimal config uses a private `CURSOR_CONFIG_DIR` so
+  delegated chats stay out of your history; Cursor's login is reached through the unchanged
+  home and is never read. Known limits: no OS sandbox (write permission requests are approved
+  by pactify), read-only relies on Cursor's ask mode plus denied permission requests and a
+  repository check, no separate effort setting (put it in the model id), cost is not reported,
+  quota exhaustion is recognized from text only, storage cleanup does not remove Cursor chats,
+  and the logged-in protocol paths were verified against a scripted peer, not a live account.
+  The plugin's minimum CLI moves to the release that ships this harness.
+- The ACP client now answers Cursor's `cursor/ask_question` and `cursor/create_plan` requests
+  with a cancellation and other `cursor/*` requests with method-not-found, and can call
+  `authenticate`.
+
 - `pactify sub prune` names the entry that makes it protect every job. When an unreadable
   job, a job directory without `state.json` or a symlink in `jobs/` blocks deletion, the
   reason now says which entry and why, instead of a generic ownership message.

@@ -1,6 +1,6 @@
 # Upstream harness compatibility
 
-Pactify tracks codex, kimi, opencode, agy and experimental dsh contracts. Unsupported CLI versions
+Pactify tracks codex, kimi, opencode, agy and experimental dsh and cursor contracts. Unsupported CLI versions
 must fail before a harness process starts, with a clear explanation and recovery
 suggestion. Track successor packages as well as the original installation channel:
 a package's `latest` tag alone does not reveal a migration to a new package.
@@ -13,6 +13,7 @@ a package's `latest` tag alone does not reveal a migration to a new package.
 | kimi | npm `@moonshot-ai/kimi-code` | `internal/cockpit/harnessdrift/versions.json` | `harness-drift.yml`: arguments and ACP handshake |
 | opencode | npm `opencode-ai` (1.x), `@opencode/cli` (2.x) | `versions.json`: 1.19.0 / 2.3.0 | `opencode-api.yml`: pinned and latest OpenAPI contracts for both channels |
 | agy | Installer manifest | `versions.json` | `harness-drift.yml`: arguments and stream events |
+| cursor | Install script (`cursor.com/install` names the latest build) | `versions.json` | `harness-drift.yml`: help, the `acp` command and the unauthenticated ACP initialize with `cursor_login` |
 
 Opencode is supported on both majors; agy remains experimental. Opencode 1.x
 stays supported while `opencode-ai` still publishes 1.x releases and the v1
@@ -97,6 +98,23 @@ relative to the git worktree root, so they cannot override its absolute file lis
 when a job starts in a repository subdirectory. V2 edit/patch use action `edit`
 and resources relative to the session directory or absolute paths; `../` paths
 outside the allowed roots remain denied.
+
+## Experimental Cursor harness
+
+The `cursor` adapter consumes `agent acp` (legacy `cursor-agent acp`), pinned to the dated
+build in `versions.json` (currently 2026.11.17-f532c45). Cursor publishes no package registry
+entry, so release watch reads the build named by the install script; a newer build is
+reported as an update and never as a new major line, because the year in the version is
+not one. The live drift job installs the latest CLI in a disposable home, runs it without a
+login and checks `--help`, the `acp` command and the `initialize` result (protocol version 1,
+`loadSession`, the `cursor_login` method). The recorded unauthenticated handshake in
+`internal/cockpit/testdata/cursor` backs the offline tests; the logged-in paths (session
+modes, model options, usage, permissions, cancellation, resume) are covered by a scripted
+peer and have not been recorded against a real account. Ordinary checks never install or
+invoke Cursor or call a model. Use `pactify sub doctor cursor` when authorized.
+Cursor updates itself by default; pactify does not disable that.
+See [architecture](architecture.md#experimental-cursor-harness) for sandbox, home and
+read-only details.
 
 ## Experimental DeepSeek Harness
 

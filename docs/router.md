@@ -162,7 +162,7 @@ See [Jobs dashboard](jobs-view.md) for API access and security.
 `GET /api/sub/harnesses` (panel: `GET /api/harnesses`, requiring Bearer auth)
 returns `harnesses` rows with `name`, `installed`, `version`, `verifiedVersion`,
 `experimental`, `readOnly`, `sandboxed`, `models`, `default` and `efforts`.
-Only agy is experimental; opencode 1.x and 2.x are supported.
+agy, dsh and cursor are experimental; opencode 1.x and 2.x are supported.
 `models` includes items, errors, warnings and the latest discovery timestamp.
 Router defaults take precedence over advertised native defaults. Effort metadata
 can contain the union advertised by models; it does not guarantee that every
@@ -224,6 +224,17 @@ Kimi read-only uses a generated private tool allowlist, verifies per-agent tools
 snapshots and checks the repository baseline. Opencode read-only removes write/shell
 tools and checks the repository baseline. Neither provides an OS sandbox. Model-name heuristics do not infer free usage
 from `cost=0`.
+
+## Experimental Cursor harness
+
+Use `pactify sub run cursor` to select the Cursor CLI over ACP (`cursor-agent`, or `agent`
+once its help identifies Cursor). Without `--model`, Cursor's own default applies; model ids
+come from the session's ACP options (`agent models` lists them). Cursor has no separate
+effort setting, so `--effort` is rejected: put it in the model id, for example
+`model[effort=high]`. Minimal config uses a managed `CURSOR_CONFIG_DIR`, reused on resume;
+`--with-user-config` keeps chats in the user's history. Cursor reports no cost and its quota
+exhaustion appears only as text, which is classified best-effort; fallback stays within the
+harness. Cursor's own login and `CURSOR_API_KEY` pass through; sibling vendor keys are blanked.
 
 ## Experimental DeepSeek Harness
 

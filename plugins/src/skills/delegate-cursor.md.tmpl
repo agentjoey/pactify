@@ -1,0 +1,44 @@
+---
+name: delegate-cursor
+description: Use only when the user explicitly asks to delegate {{if eq .Host "claude"}}via /delegate-cursor or /pactify:delegate-cursor{{else}}by explicitly invoking the delegate-cursor skill{{end}}. Experimental harness; no OS sandbox; write permission requests are approved by pactify; results vary by model.{{if eq .Host "claude"}}
+disable-model-invocation: true{{end}}{{if ne .Host "claude"}}
+license: {{.License}}
+compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}), Cursor CLI (cursor-agent or agent) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'{{end}}
+---
+{{if ne .Host "claude"}}
+<!-- Generated from plugins/src; do not edit. -->
+{{end}}
+{{include "fragments/prerequisites.md.tmpl"}}
+# Delegate to cursor (experimental)
+
+**cursor is experimental: no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Run only via {{command "delegate-cursor"}}.
+Read-only permission requests are denied.
+Prefer the default codex harness (`/delegate` or `/delegate-codex`).
+
+**If the user invoked this skill explicitly ({{command "delegate-cursor"}}), always delegate — whatever
+the task size. The user chose the harness; do not do the work yourself instead.**
+
+Launch command (step 2 below):
+
+{{if eq .Host "claude"}}    pactify sub run cursor --write --worktree --wait 0s --json <<'BRIEF'
+    ...complete brief from step 1...
+    BRIEF
+{{else}}    pactify sub run cursor --write --worktree --wait 0s --json --brief-file <brief-file>
+{{end}}
+Use `--read-only` for investigations and reviews. Use `--write` only with explicit permission to change files. Never raise permissions yourself.
+Without `--model`, Cursor uses its own default. Preserve an explicit `--model`; models come from `agent models`.
+Cursor has no separate effort setting: put it in the model id, for example `model[effort=high]`.
+
+{{include "shared-delegation.md.tmpl"}}
+
+Pactify runs `agent acp` (or `cursor-agent acp`) and checks that the binary is Cursor's. Write access
+uses Cursor's agent mode and pactify approves its permission requests; `sandboxed=false` because
+there is no OS sandbox here. Read-only access uses Cursor's ask mode, denies every permission
+request, and fails the job if a before/after check finds any changed file in the repository.
+Cursor's interactive questions and plan approvals are answered with a cancellation.
+Default minimal config uses a private CURSOR_CONFIG_DIR, so jobs and their chats stay out of the
+user's own chat history and ignore the user's Cursor settings; login is Cursor's own (keychain,
+`agent login` or `CURSOR_API_KEY`). Never inspect credentials. `--with-user-config` uses the
+user's Cursor settings and keeps chats in the user's history.
+Quota exhaustion only appears as text and does not trigger fallback.

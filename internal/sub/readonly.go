@@ -205,5 +205,5 @@ func doctorDeniedWrite(logPath, harness string) bool {
 }
 
 func requiresReadOnlyBaseline(req Request) bool {
-	return (req.Harness == "opencode" || req.Harness == "agy" || req.Harness == "kimi") && req.Access == "read-only"
+	return (req.Harness == "opencode" || req.Harness == "agy" || req.Harness == "kimi" || req.Harness == "cursor") && req.Access == "read-only"
 }

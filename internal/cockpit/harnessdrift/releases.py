@@ -12,9 +12,11 @@ import urllib.request
 HERE = Path(__file__).resolve().parent
 COCKPIT = HERE.parent
 AGY_MANIFEST = 'https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json'
+CURSOR_INSTALLER = 'https://cursor.com/install'
 # Every channel an official installer can deliver, including successor
 # packages: opencode 2.x ships as @opencode/cli while opencode-ai stays on 1.x.
 CHANNELS = {
+    'cursor': [('installer', CURSOR_INSTALLER, 'cursor')],
     'dsh': [('npm', '@deepseek-ai/dsh', 'dsh')],
     'codex': [('npm', '@openai/codex', 'codex')],
     'kimi': [('npm', '@moonshot-ai/kimi-code', 'kimi')],
@@ -40,22 +42,51 @@ def major(version):
 def fetch_json(url, accept='application/json'):
     request = urllib.request.Request(url, headers={'Accept': accept, 'User-Agent': 'pactify-release-watch'})
     with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)
+        body = response.read()
+    try:
+        return json.loads(body)
+    except ValueError:
+        # Cursor publishes its newest build only inside the install script.
+        return {'text': body.decode('utf-8', 'replace')}
 
 
 def latest(kind, source, fetch=fetch_json):
     """Returns (version, deprecated message or '')."""
     if kind == 'manifest':
         return fetch(source)['version'], ''
+    if kind == 'installer':
+        match = re.search(r'/lab/(\d{4}\.\d{1,2}\.\d{1,2}-[0-9a-f]{6,})/', fetch(source)['text'])
+        if not match:
+            raise ValueError('install script no longer names a build')
+        return match.group(1), ''
     doc = fetch('https://registry.npmjs.org/' + source.replace('/', '%2F'))
     version = doc['dist-tags']['latest']
     return version, doc.get('versions', {}).get(version, {}).get('deprecated', '') or ''
+
+
+def cursor_build(version):
+    match = re.fullmatch(r'(\d{4})\.(\d{1,2})\.(\d{1,2})-[0-9a-f]{6,}', version or '')
+    return tuple(int(part) for part in match.groups()) if match else None
+
+
+def classify_cursor(baseline, version):
+    """Cursor ships dated builds, so a year rollover is not a new major line."""
+    have, want = cursor_build(baseline), cursor_build(version)
+    if want is None:
+        return 'alert', f'unrecognized version {version!r}'
+    if version == baseline:
+        return 'ok', version
+    if have is not None and want < have:
+        return 'ok', f'{version} (older build; baseline {baseline})'
+    return 'update', f'{version} (baseline {baseline}); the weekly live check covers the ACP handshake; run pactify sub doctor cursor before moving the baseline'
 
 
 def classify(harness, baseline, version, deprecated=''):
     """Returns (level, message); level is ok, update, tracked or alert."""
     if deprecated:
         return 'alert', f'latest {version} is deprecated: {deprecated}'
+    if harness == 'cursor':
+        return classify_cursor(baseline, version)
     have, want = major(baseline), major(version)
     # dsh's experimental SDK is pinned by patch, unlike the established
     # harnesses' major-line policies (codex zero minors remain routine).

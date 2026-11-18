@@ -37,6 +37,8 @@ func ClassifyFailure(harness, message string, raw json.RawMessage, now time.Time
 		return kimiFailure(message, raw, now)
 	case "opencode":
 		return opencodeFailure(message, raw)
+	case "cursor":
+		return cursorFailure(message, raw)
 	default:
 		return Failure{Class: "other"}
 	}

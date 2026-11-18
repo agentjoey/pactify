@@ -39,6 +39,9 @@ func modelChoices(harness, requested string, models []string) string {
 	text := strings.Join(shown, ", ")
 	if len(choices) > limit {
 		command := harness + " models"
+		if harness == "cursor" {
+			command = "agent models"
+		}
 		if harness == "codex" {
 			command = "codex debug models"
 		}

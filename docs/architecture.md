@@ -3,7 +3,7 @@
 > Current release: **v0.15.0**. See [CHANGELOG](CHANGELOG.md).
 
 Pactify is a local harness router. The CLI and Claude Code plugin delegate tasks
-to codex (default), kimi and opencode, with experimental agy and dsh support. Jobs,
+to codex (default), kimi and opencode, with experimental agy, dsh and cursor support. Jobs,
 results and worktrees are managed locally.
 
 ## Components
@@ -66,6 +66,32 @@ timeout; streaming responses have no overall write timeout. See
 Job and router data live under `PACTIFY_HOME` (default `~/.pactify`). No pact
 protocol files, ledger projections, MCP server or agent configuration wiring are
 part of the current product.
+
+## Experimental Cursor harness
+
+The `cursor` adapter drives `agent acp` (or the legacy `cursor-agent acp`) through the
+shared ACP client: initialize, `authenticate` with `cursor_login`, `session/new` or
+`session/load`, then prompt turns. The binary is found as `cursor-agent` first, then
+`agent`; a binary named `agent` is accepted only when its version and help text identify
+Cursor, because other CLIs use that name. Discovery probes use a throwaway config directory.
+An agent without a login never answers `authenticate`, so the call is bounded and the
+following `session/new` error (-32000) classifies as `auth`.
+
+Write jobs run in Cursor's agent mode and pactify approves permission requests; there is
+no OS sandbox and `sandboxed=false`. Read-only jobs select Cursor's `ask` mode, deny every
+permission request and are verified against a fail-closed repository baseline; a session that
+does not offer `ask` mode refuses to start. Cursor's blocking extension requests
+(`cursor/ask_question`, `cursor/create_plan`) are answered with a cancellation and other
+`cursor/*` requests with method-not-found, so a turn never waits for a human.
+
+Default minimal config sets a managed `CURSOR_CONFIG_DIR`, which holds Cursor's settings and
+its chat store, so delegated chats stay out of the user's history and the user's allowlists,
+sandbox settings and team selection are not inherited. HOME is unchanged: Cursor's login
+(OS keychain or an auth file beside the real home) stays reachable and pactify links and
+reads nothing. `CURSOR_API_KEY` passes through; sibling vendor keys are blanked.
+`--with-user-config` uses the user's settings and keeps chats visible. Effort is part of
+Cursor's parameterized model id, so there is no separate effort value. Models come from the
+session's ACP options. Cost is not reported and Cursor's auto-update is not disabled by pactify.
 
 ## Experimental DeepSeek Harness
 

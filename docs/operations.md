@@ -230,6 +230,6 @@ not ordinary foreground use. Release installation and local builds are separate.
 
 See [installation](deployment.md) and [CHANGELOG](CHANGELOG.md).
 
-Storage cleanup does not recognize experimental dsh session units because their
-on-disk layout is not pinned by the SDK contract. Generic log retention still
+Storage cleanup does not recognize experimental dsh or cursor session units because their
+on-disk layout is not pinned by their contracts. Generic log retention still
 applies; credential links remain protected.

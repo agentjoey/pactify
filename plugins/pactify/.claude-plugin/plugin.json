@@ -3,7 +3,7 @@
     "name": "Pactify",
     "url": "https://pactify.dev"
   },
-  "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy or dsh; review results and view job status with /jobs.",
+  "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy, dsh or cursor; review results and view job status with /jobs.",
   "documentationUrl": "https://pactify.dev/docs",
   "homepage": "https://pactify.dev",
   "keywords": [
@@ -12,12 +12,13 @@
     "codex",
     "kimi",
     "opencode",
-    "dsh"
+    "dsh",
+    "cursor"
   ],
   "license": "FSL-1.1-MIT",
   "name": "pactify",
   "privacyPolicyUrl": "https://pactify.dev/privacy",
   "repository": "https://github.com/agentjoey/pactify",
   "supportUrl": "https://github.com/agentjoey/pactify/issues",
-  "version": "0.7.0"
+  "version": "0.8.0"
 }

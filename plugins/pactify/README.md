@@ -21,7 +21,7 @@ The default harness is codex. kimi read-only access uses a generated private con
 
 ## Data handling
 
-pactify runs locally, has no telemetry, and operates no remote server. The plugin only runs pactify commands on your machine; its installation check never accesses the network. Briefs and repository content are sent only by the harness CLI you installed and logged in yourself, to that CLI's provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, dsh to DeepSeek by default, and opencode to whichever provider you configured in opencode.
+pactify runs locally, has no telemetry, and operates no remote server. The plugin only runs pactify commands on your machine; its installation check never accesses the network. Briefs and repository content are sent only by the harness CLI you installed and logged in yourself, to that CLI's provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, dsh to DeepSeek by default, cursor to Cursor, and opencode to whichever provider you configured in opencode.
 
 pactify stores data locally under `PACTIFY_HOME` (default `~/.pactify`): job metadata, briefs, logs, diffs and results, plus private harness homes and caches. Retention follows the [storage lifecycle](https://github.com/agentjoey/pactify/blob/main/docs/operations.md#storage-lifecycle). The dashboard (`pactify serve`) defaults to loopback, non-loopback binds require `PACTIFY_SERVE_TOKEN`, and the read-only panel listens only on `127.0.0.1`. To delete data, run `pactify sub prune` (preview, then `--yes`; add `--include-worktrees` for pending worktrees), or remove `PACTIFY_HOME`.
 
@@ -81,7 +81,7 @@ The Claude main thread first writes a complete brief with Background, numbered g
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
 Require inspection of callers, special cases, and documented exceptions before changing rules, and a failing regression test before each behavior change. Do not change existing tests to accommodate new behavior unless the brief explicitly identifies the old behavior as wrong; name any such changes in the final reply.
 Forbid commits and credential access; optionally forbid subagents and report files.
-The six delegation skills (delegate-codex, delegate-kimi, delegate-agy, delegate-opencode, delegate-dsh, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
+The seven delegation skills (delegate-codex, delegate-kimi, delegate-agy, delegate-opencode, delegate-dsh, delegate-cursor, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
@@ -290,13 +290,23 @@ Linked worktrees cannot git add/commit because git metadata lies outside the wor
 Pactify still collects the diff. Minimal config isolates sessions in a managed DSH_HOME;
 `--with-user-config` keeps them visible. Telemetry is disabled in both modes.
 
+## cursor (experimental)
+
+Experimental Cursor support drives the official Cursor CLI over ACP (`agent acp`; the legacy
+`cursor-agent` name is tried first). Invoke `/delegate-cursor` or `/pactify:delegate-cursor`, or
+the `pactify:sub-cursor` forwarding agent. There is no OS sandbox: write permission requests are
+approved by pactify. Read-only uses Cursor's ask mode, denies every permission request and fails
+the job if any repository file changed. Minimal config uses a private `CURSOR_CONFIG_DIR`, so
+delegated chats stay out of your own history; login stays Cursor's own (keychain, `agent login` or
+`CURSOR_API_KEY`) and pactify never reads it. `--with-user-config` keeps chats visible.
+
 ## Access modes
 
-| | codex | kimi | agy | opencode | dsh |
-|---|---|---|---|---|---|
-| Support | Supported (default) | Supported | Experimental | Supported (1.x and 2.x) | Experimental (0.2.1) |
-| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + per-type permissions + directory guardrail | workspace-write OS sandbox for files and shell, **network not sandboxed**; no approval channel |
-| `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline | read-only OS sandbox for files and shell, network not sandboxed |
+| | codex | kimi | agy | opencode | dsh | cursor |
+|---|---|---|---|---|---|---|
+| Support | Supported (default) | Supported | Experimental | Supported (1.x and 2.x) | Experimental (0.2.1) | Experimental |
+| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + per-type permissions + directory guardrail | workspace-write OS sandbox for files and shell, **network not sandboxed**; no approval channel | agent mode, permission requests approved by pactify, no OS sandbox |
+| `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline | read-only OS sandbox for files and shell, network not sandboxed | ask mode + permission requests denied + fail-closed baseline |
 
 ## Known limitations
 

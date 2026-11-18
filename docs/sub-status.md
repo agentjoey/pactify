@@ -102,6 +102,10 @@ When a job fails, is canceled, hits an idle timeout or the connection closes ear
 
 opencode uses the v1 `GET /session/{id}` tokens/cost session summary and subtracts the baseline taken at this Start: input is input + cache.read + cache.write, output is output + reasoning. Automatic retries share the startup baseline, while manual resumes take a new baseline after a server restart so history is not counted twice. Individual usage returned by `/message` does not participate in accumulation, and `opencode export` is no longer called. When a complete summary cannot be obtained, `usagePartial` is set.
 
+Cursor usage is taken from ACP `usage` fields when the agent sends them; otherwise the job
+reports no tokens, and cost is not reported. Cursor read-only jobs are checked against the same
+fail-closed repository baseline as agy and opencode.
+
 dsh sums each SDK assistant/message usage record: input is inputTokens +
 cacheReadTokens + cacheWriteTokens, and output is outputTokens. This applies to
 both unified usage events and independent usage verification. Child sessions
@@ -135,6 +139,11 @@ DSH terminal and RPC diagnostics preserve sanitized codes/messages, but dsh has
 no vendor failure classifier yet: these errors retain class `other`, so automatic
 quota fallback does not trigger for dsh, even when the message reports exhausted
 balance. Other harness classifiers are unchanged.
+
+Cursor classifies ACP code -32000 (authentication required) as `auth` and ACP stop reasons by
+their own class; everything else is matched by text. Cursor reports quota exhaustion only in
+text ("usage limit", `resource_exhausted`), so that table is best-effort and unverified against
+a live account.
 
 SSE session.error configuration/model errors are other, with the readable error preserved. ACP only completes on end_turn; cancelled/refusal/max_tokens/max_turn_requests all fail and retain their classes.
 `-32603` is only a generic Internal Error and cannot be classified as transient on its own; for example, insufficient balance is still quota.
@@ -216,7 +225,7 @@ jobs that had retries, counting a single job only once even if it retried multip
 
 ## Empty-reply follow-up
 
-For every harness (codex, kimi, agy, opencode, dsh), when a turn ends normally and the final text is still empty after `strings.TrimSpace`,
+For every harness (codex, kimi, agy, opencode, dsh, cursor), when a turn ends normally and the final text is still empty after `strings.TrimSpace`,
 the worker asks exactly once more in the same live session:
 
 > You ended without a written answer. Reply now with your result: what you found or changed and which checks you ran. Do not start new work.

@@ -46,6 +46,10 @@ func TestAgyProcessHelper(t *testing.T) {
 	if !has("--dangerously-skip-permissions") {
 		os.Exit(14)
 	}
+	// agy 1.5.7 made Auto the headless default; write jobs pin their mode.
+	if !strings.Contains(strings.Join(args, " "), "--mode accept-edits") {
+		os.Exit(17)
+	}
 	scan := bufio.NewScanner(os.Stdin)
 nextInput:
 	if !scan.Scan() {

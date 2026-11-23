@@ -12,6 +12,10 @@
   for headless runs, so write jobs had silently followed that upstream default. The
   README now states that Pactify uses agy only with a Google sign-in; `GEMINI_API_KEY`
   and Application Default Credentials logins are not used.
+- Agy jobs no longer fail with an auth error before agy starts when the Google sign-in
+  is kept in the OS keyring. agy 1.5.15 can store its login there instead of
+  `~/.gemini/antigravity-cli/antigravity-oauth-token`; Pactify now links that file only
+  when it exists and leaves a missing login for agy itself to report.
 - The reviewed opencode 2.x contract moves to 2.3.2 after doctor passed every check on
   it. The only consumed-schema change is a new open-ended `video` model type.
 - Worktree jobs repair a `.git` link file that the harness deleted or corrupted. Pactify

@@ -146,3 +146,56 @@ func TestManagedMirrorCleanupReportsPrivateHomeWrites(t *testing.T) {
 		t.Fatalf("real HOME entry changed: %q %v", data, err)
 	}
 }
+
+// agy can keep its login in the OS keyring, so a missing token file must not
+// block the job; a stale link to it is removed, and the file is linked again
+// once it exists. Required links still fail when their source is missing.
+func TestManagedHomeOptionalCredentialLink(t *testing.T) {
+	source, home := t.TempDir(), filepath.Join(t.TempDir(), "managed")
+	m := agyHome(home, source)
+	m.QuarantineDir = filepath.Join(t.TempDir(), "quarantine")
+	path := filepath.Join(home, agyTokenPath)
+	token := filepath.Join(source, agyTokenPath)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(token, path); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Prepare(context.Background()); err != nil {
+		t.Fatalf("missing optional token blocked prepare: %v", err)
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatalf("dangling token link kept: %v", err)
+	}
+	if err := m.Check(); err != nil {
+		t.Fatal(err)
+	}
+	if warnings := m.Cleanup(); len(warnings) != 0 {
+		t.Fatal(warnings)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(token), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(token, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Prepare(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if target, err := os.Readlink(path); err != nil || target != token {
+		t.Fatalf("token link: %q %v", target, err)
+	}
+	if err := m.Check(); err != nil {
+		t.Fatal(err)
+	}
+	m.Cleanup()
+
+	required := opencodeData(filepath.Join(t.TempDir(), "managed"), t.TempDir())
+	required.QuarantineDir = filepath.Join(t.TempDir(), "quarantine")
+	if err := required.Prepare(context.Background()); err == nil || !strings.Contains(err.Error(), "login first") {
+		t.Fatalf("missing required credential accepted: %v", err)
+	}
+	required.Cleanup()
+}

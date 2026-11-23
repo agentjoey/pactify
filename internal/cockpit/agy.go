@@ -199,7 +199,10 @@ func (s *agySession) Prompt(ctx context.Context, msg UserMessage) error {
 			args = append(args, "--mode", "plan")
 		}
 		if s.opts.Access == AccessWrite {
-			args = append(args, "--dangerously-skip-permissions")
+			// agy 1.5.7 made Auto the default mode for headless runs. Pin
+			// accept-edits so write jobs keep the reviewed behavior instead of
+			// following upstream default changes.
+			args = append(args, "--mode", "accept-edits", "--dangerously-skip-permissions")
 		}
 		cmd := s.backend.command(context.WithoutCancel(s.ctx), args...)
 		cmd.Dir = s.opts.RepoDir

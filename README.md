@@ -126,7 +126,9 @@ generated private config with an execution-time tool allowlist, snapshot verific
 for every agent, and a fail-closed repository baseline. Shell, writes, sub-agents,
 cron, MCP and network tools are unavailable. Use `kimi --read-only` for reviews;
 `--with-user-config` is incompatible. Kimi has no OS sandbox for writes; permission
-requests in write jobs are approved by pactify. `agy --read-only` uses plan mode and managed hooks. opencode uses
+requests in write jobs are approved by pactify. `agy --read-only` uses plan mode and managed hooks; agy write
+jobs use `accept-edits` mode. Pactify supports agy only with a Google sign-in (`agy login`); a
+`GEMINI_API_KEY` or Application Default Credentials login is not used. opencode uses
 a per-job server (`opencode serve` on 1.x, `@opencode/cli` on 2.x); its read-only mode denies shell/edit tools, reports
 `sandboxed=false`, and fails with `readonly_violation` if repository files change.
 In write mode, pactify blocks opencode file tools from accessing directories outside
@@ -139,7 +141,7 @@ permission checks are a guardrail, not isolation. Experimental harness results v
 | codex | Supported; default harness |
 | kimi | Supported |
 | opencode 1.x (`opencode-ai`) | Supported while `opencode-ai` still publishes 1.x releases and the v1 drift/contract check stays green |
-| opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.1.0) |
+| opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.3.2) |
 | agy | Experimental |
 
 See [upstream compatibility](docs/harness-updates.md) for contract checks and evaluation gates.

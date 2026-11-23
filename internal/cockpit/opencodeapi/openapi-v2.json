@@ -887,7 +887,8 @@
             "enum": [
               "chat",
               "decision",
-              "image"
+              "image",
+              "video"
             ],
             "type": "string"
           },

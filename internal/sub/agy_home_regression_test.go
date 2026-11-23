@@ -17,9 +17,13 @@ func TestAgyPrivateDirectoriesWithoutLogin(t *testing.T) {
 				}
 				write(t, source, agyTokenPath, "fixture")
 			}
-			err := agyHome(home, source).Prepare(context.Background())
-			if (err == nil) != loggedIn {
-				t.Fatalf("login validation changed: %v", err)
+			// agy may keep its login in the OS keyring, so a missing token file
+			// is not a setup error; agy itself reports a missing login.
+			if err := agyHome(home, source).Prepare(context.Background()); err != nil {
+				t.Fatalf("prepare: %v", err)
+			}
+			if _, err := os.Lstat(filepath.Join(home, agyTokenPath)); (err == nil) != loggedIn {
+				t.Fatalf("token link present=%v, want %v", err == nil, loggedIn)
 			}
 			for _, name := range []string{".gemini", ".gemini/antigravity-cli"} {
 				info, err := os.Lstat(filepath.Join(home, name))
@@ -79,9 +83,9 @@ func TestAgyPrivateDirectoriesRepairModesAndRejectLinks(t *testing.T) {
 					}
 				}
 			}
-			// No token: setup must still repair private modes, or reject the link.
-			if err := agyHome(home, source).Prepare(context.Background()); err == nil {
-				t.Fatal("missing login accepted")
+			// No token file: setup repairs private modes, and still rejects the link.
+			if err := agyHome(home, source).Prepare(context.Background()); (err == nil) == linked {
+				t.Fatalf("linked=%v prepare err=%v", linked, err)
 			}
 			if !linked {
 				for _, name := range agyPrivateDirs {

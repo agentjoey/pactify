@@ -21,6 +21,9 @@ type homeLink struct {
 	Directory       bool
 	Credential      bool
 	CreateDirectory bool
+	// Optional explicit links are skipped while their source is absent, for
+	// harnesses that may keep the login elsewhere (agy can use the OS keyring).
+	Optional bool
 }
 
 // managedHome inspects metadata only. os.Root confines local mutations;
@@ -375,6 +378,7 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 	if err != nil {
 		return err
 	}
+	absent := map[string]bool{}
 	for _, name := range sortedHomeLinks(links) {
 		if _, err = m.path(name); err != nil {
 			return err
@@ -393,6 +397,10 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 			}
 		}
 		info, err := os.Stat(link.Target)
+		if link.Optional && os.IsNotExist(err) {
+			absent[name] = true
+			continue
+		}
 		if err != nil {
 			return fmt.Errorf("%s %s unavailable; run %s login first: %w", m.Name, name, m.Name, err)
 		}
@@ -434,6 +442,15 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 			return err
 		}
 		target := links[name].Target
+		if absent[name] {
+			// Drop only our own dangling link; a private copy is left for cleanup.
+			if current, err := os.Readlink(path); err == nil && current == target {
+				if err = root.Remove(name); err != nil {
+					return err
+				}
+			}
+			continue
+		}
 		if current, err := os.Readlink(path); err == nil && current == target {
 			if exclusive && links[name].Credential && !links[name].Directory {
 				if _, explicit := m.Links[name]; explicit {
@@ -538,6 +555,14 @@ func (m *managedHome) Check() error {
 		path, err := m.path(name)
 		if err != nil {
 			return err
+		}
+		if links[name].Optional {
+			if _, err := os.Stat(links[name].Target); os.IsNotExist(err) {
+				if _, err := os.Lstat(path); !os.IsNotExist(err) {
+					return fmt.Errorf("%s %s source is absent but the managed path exists", m.Name, name)
+				}
+				continue
+			}
 		}
 		target, err := os.Readlink(path)
 		if err != nil {

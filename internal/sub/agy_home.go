@@ -6,13 +6,15 @@ import (
 	"path/filepath"
 )
 
+// agy 1.5.15 may store its OAuth login in the OS keyring instead of this file;
+// the link is optional so a keyring login still reaches agy.
 const agyTokenPath = ".gemini/antigravity-cli/antigravity-oauth-token"
 
 var agyPrivateDirs = []string{".gemini", ".gemini/antigravity-cli"}
 
 func managedAgyHome() (string, error) { return managedHarnessHome("agy") }
 func agyHome(home, source string) *managedHome {
-	return &managedHome{Name: "agy", Home: home, Source: source, Mirror: true, Exclude: []string{".gemini"}, Directories: agyPrivateDirs, Links: map[string]homeLink{agyTokenPath: {Target: filepath.Join(source, agyTokenPath), Credential: true}}}
+	return &managedHome{Name: "agy", Home: home, Source: source, Mirror: true, Exclude: []string{".gemini"}, Directories: agyPrivateDirs, Links: map[string]homeLink{agyTokenPath: {Target: filepath.Join(source, agyTokenPath), Credential: true, Optional: true}}}
 }
 func doctorAgyHome(store Store, id string, result Result, succeeded bool) error {
 	if !succeeded || result.SessionID == "" {

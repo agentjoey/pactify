@@ -141,7 +141,7 @@ permission checks are a guardrail, not isolation. Experimental harness results v
 | codex | Supported; default harness |
 | kimi | Supported |
 | opencode 1.x (`opencode-ai`) | Supported while `opencode-ai` still publishes 1.x releases and the v1 drift/contract check stays green |
-| opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.3.0) |
+| opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.3.2) |
 | agy | Experimental |
 
 See [upstream compatibility](docs/harness-updates.md) for contract checks and evaluation gates.

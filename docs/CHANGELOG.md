@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- kimi-code 2.7 no longer writes `llm.request` to its session wire, so Pactify could not
+  confirm the model a kimi job used and `pactify sub doctor kimi` reported the Model check
+  as failed. The model now also comes from the per-turn `usage.record`, which 2.7 tags with
+  the model; `llm.request` stays authoritative on older versions. Read-only verification
+  likewise treats `usage.record` as evidence that an agent made a model call. The kimi
+  contract baseline moves to 2.7.2 and the agy baseline to 1.5.14; both pass doctor.
 - Worktree jobs repair a `.git` link file that the harness deleted or corrupted. Pactify
   rewrites the link from the repository's own worktree record when the job finishes and
   before apply, discard and resume, so the changes can still be reviewed and applied.

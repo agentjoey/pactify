@@ -28,7 +28,7 @@ func kimiReadonlyReviewWire(t *testing.T, home, wire string) string {
 
 func TestKimiReadonlyReviewWireEvidence(t *testing.T) {
 	safe := `{"type":"llm.tools_snapshot","tools":[{"name":"Read"}]}` + "\n"
-	for _, scenario := range []string{"long-line", "later-violation", "empty-agent", "called-agent-without-wire", "wire-without-snapshot", "incomplete-before-violation"} {
+	for _, scenario := range []string{"long-line", "later-violation", "empty-agent", "called-agent-without-wire", "usage-agent-without-wire", "wire-without-snapshot", "incomplete-before-violation"} {
 		t.Run(scenario, func(t *testing.T) {
 			home := t.TempDir()
 			wire := safe
@@ -41,8 +41,12 @@ func TestKimiReadonlyReviewWireEvidence(t *testing.T) {
 			if scenario == "called-agent-without-wire" {
 				wire += `{"type":"llm.request","agentId":"child"}` + "\n"
 			}
+			// kimi-code 2.7 writes usage.record but no llm.request for a call.
+			if scenario == "usage-agent-without-wire" {
+				wire += `{"type":"usage.record","agentId":"child","model":"m","usageScope":"turn","usage":{"inputOther":1,"output":1}}` + "\n"
+			}
 			dir := kimiReadonlyReviewWire(t, home, wire)
-			if scenario == "empty-agent" || scenario == "called-agent-without-wire" {
+			if scenario == "empty-agent" || scenario == "called-agent-without-wire" || scenario == "usage-agent-without-wire" {
 				os.MkdirAll(filepath.Join(dir, "agents/child"), 0700)
 			}
 			if scenario == "wire-without-snapshot" || scenario == "incomplete-before-violation" {
@@ -57,7 +61,7 @@ func TestKimiReadonlyReviewWireEvidence(t *testing.T) {
 				}
 				return
 			}
-			if scenario == "called-agent-without-wire" || scenario == "wire-without-snapshot" {
+			if scenario == "called-agent-without-wire" || scenario == "usage-agent-without-wire" || scenario == "wire-without-snapshot" {
 				if err == nil {
 					t.Fatal("missing called-agent evidence accepted")
 				}

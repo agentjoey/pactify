@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // KimiRecord summarizes request models and per-turn usage without counting step duplicates.
@@ -105,6 +106,9 @@ func ReadKimiRecordOffsets(kimiHome, sessionID string, offsets map[string]int64)
 		return record, fmt.Errorf("kimi main wire unavailable: %w", os.ErrNotExist)
 	}
 	seen := map[string]bool{}
+	// kimi-code 2.7 no longer writes llm.request and names the model only on
+	// usage.record. Those models count only when no llm.request was seen.
+	var requestModels, usageModels []string
 	for _, path := range paths {
 		main := filepath.Base(filepath.Dir(path)) == "main"
 		err = readKimiLinesFrom(path, offsets[filepath.Base(filepath.Dir(path))], true, func(line []byte) error {
@@ -149,7 +153,7 @@ func ReadKimiRecordOffsets(kimiHome, sessionID string, offsets map[string]int64)
 					model = entry.Model
 				}
 				if model != "" && !seen[model] {
-					record.Models = append(record.Models, model)
+					requestModels = append(requestModels, model)
 					seen[model] = true
 				}
 			case "usage.record":
@@ -159,6 +163,9 @@ func ReadKimiRecordOffsets(kimiHome, sessionID string, offsets map[string]int64)
 					record.CacheRead += entry.Usage.InputCacheRead
 					if main {
 						record.Turns++
+						if entry.Model != "" && !slices.Contains(usageModels, entry.Model) {
+							usageModels = append(usageModels, entry.Model)
+						}
 					}
 				}
 			}
@@ -167,6 +174,10 @@ func ReadKimiRecordOffsets(kimiHome, sessionID string, offsets map[string]int64)
 		if err != nil {
 			return KimiRecord{}, err
 		}
+	}
+	record.Models = requestModels
+	if len(record.Models) == 0 {
+		record.Models = usageModels
 	}
 	return record, nil
 }

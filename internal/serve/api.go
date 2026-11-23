@@ -45,6 +45,7 @@ func (s *Server) handler(security *securityConfig) http.Handler {
 		storage := &sub.StorageReader{}
 		s.registerStorageWrites(mux, store, storage)
 		s.registerRouterWrites(mux, store)
+		s.registerHarnessWrites(mux, store)
 		s.registerJobWrites(mux, store, store.StartDashboardWorker)
 		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store, storage)))
 	}

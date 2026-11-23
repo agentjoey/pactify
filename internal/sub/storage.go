@@ -1123,9 +1123,20 @@ func (s Store) pruneStorage(ctx context.Context, opts PruneOptions, deps storage
 	}
 	pass := storageIdlePass{root: r, jobs: filepath.Base(s.Root), check: checkIdle}
 	for li := 1; li < len(plan.Locations); li++ {
+		prunedSessions := map[string]bool{}
 		for _, item := range plan.Locations[li].Items {
 			if item.Protected {
 				continue
+			}
+			sessionKey := ""
+			if li == 2 && item.Session != "" {
+				parts := strings.Split(filepath.ToSlash(item.Path), "/")
+				if len(parts) >= 2 {
+					sessionKey = parts[1] + "\x00" + item.Session
+					if prunedSessions[sessionKey] {
+						continue
+					}
+				}
 			}
 			removed, e := s.pruneStorageItem(ctx, r, item, li, pass.allow)
 			storageAddRemoved(&run.Removed[li], removed)
@@ -1135,6 +1146,9 @@ func (s Store) pruneStorage(ctx context.Context, opts PruneOptions, deps storage
 					break
 				}
 				continue
+			}
+			if sessionKey != "" {
+				prunedSessions[sessionKey] = true
 			}
 		}
 	}

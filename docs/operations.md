@@ -43,9 +43,10 @@ Codex, or when its API fails, the job stays for retry. **Deleting these threads
 removes them from Codex Remote Control; ordinary completion only archives them
 and Remote Control can still show archived threads.** Kimi uses its local web
 delete API with a verified private-file fallback. OpenCode uses its native
-private server API. Agy removes only recognized private conversation files;
-an unsupported layout is retained with a failure. Non-Codex sessions created
-with `--with-user-config` are retained because prune never cleans real user homes.
+private server API. Agy removes only recognized private conversation and
+annotation files; an unsupported layout is retained with a failure. Non-Codex
+sessions created with `--with-user-config` are retained because prune never
+cleans real user homes.
 
 No cleanup traverses a credential link or an external symlink. Incomplete scans,
 unreadable state, unsafe paths and ownership errors keep affected data and are

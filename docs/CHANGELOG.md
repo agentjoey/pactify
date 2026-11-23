@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Storage cleanup now removes an agy session's annotation file with the session, and
+  reclaims annotations left behind by earlier cleanups.
 - kimi-code 2.7 no longer writes `llm.request` to its session wire, so Pactify could not
   confirm the model a kimi job used and `pactify sub doctor kimi` reported the Model check
   as failed. The model now also comes from the per-turn `usage.record`, which 2.7 tags with

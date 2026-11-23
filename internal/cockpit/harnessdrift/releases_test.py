@@ -57,7 +57,7 @@ class ReleaseWatchTests(unittest.TestCase):
 
     def test_repo_baselines_cover_every_channel(self):
         table = releases.baselines()
-        self.assertEqual(table['opencode2'], '2.3.0')
+        self.assertEqual(table['opencode2'], '2.3.2')
         self.assertEqual(table['kimi'], '2.7.2')
         self.assertEqual(table['agy'], '1.5.14')
         for channels in releases.CHANNELS.values():

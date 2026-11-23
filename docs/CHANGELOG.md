@@ -8,6 +8,12 @@
   the model; `llm.request` stays authoritative on older versions. Read-only verification
   likewise treats `usage.record` as evidence that an agent made a model call. The kimi
   contract baseline moves to 2.7.2 and the agy baseline to 1.5.14; both pass doctor.
+- Agy write jobs now run in `accept-edits` mode. agy 1.5.7 made Auto the default mode
+  for headless runs, so write jobs had silently followed that upstream default. The
+  README now states that Pactify uses agy only with a Google sign-in; `GEMINI_API_KEY`
+  and Application Default Credentials logins are not used.
+- The reviewed opencode 2.x contract moves to 2.3.2 after doctor passed every check on
+  it. The only consumed-schema change is a new open-ended `video` model type.
 - Worktree jobs repair a `.git` link file that the harness deleted or corrupted. Pactify
   rewrites the link from the repository's own worktree record when the job finishes and
   before apply, discard and resume, so the changes can still be reviewed and applied.

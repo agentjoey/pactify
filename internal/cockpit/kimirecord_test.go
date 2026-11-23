@@ -156,3 +156,37 @@ func TestKimiRecordReportsMCPDiscovery(t *testing.T) {
 		t.Fatalf("MCP discovery missing: %+v %v", r, err)
 	}
 }
+
+// kimi-code 2.7 stopped writing llm.request; the model only appears on
+// usage.record. Lines are trimmed from a real 2.7.2 wire.
+func TestReadKimiRecordModelFromUsageRecordWithoutLLMRequest(t *testing.T) {
+	home := writeKimiFixture(t, `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, `{"type":"profile.bind","agentId":"main","modelAlias":"kimi-code/kimi-for-coding","profileName":"agent"}
+{"type":"usage.record","agentId":"main","model":"kimi-code/kimi-for-coding","usage":{"inputOther":1200,"output":234,"inputCacheRead":12288,"inputCacheCreation":0},"usageScope":"turn"}
+{"type":"usage.record","agentId":"main","model":"kimi-code/kimi-for-coding","usage":{"inputOther":468,"output":120,"inputCacheRead":13312,"inputCacheCreation":0},"usageScope":"turn"}
+{"type":"turn.ended","agentId":"main","reason":"completed"}
+{"type":"prompt.completed","agentId":"main"}
+`)
+	r, err := ReadKimiRecord(home, "session_abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := KimiRecord{Models: []string{"kimi-code/kimi-for-coding"}, InputTokens: 27268, OutputTokens: 354, CacheRead: 25600, Turns: 2, CompletedPrompts: 1, EndedTurns: 1, Reason: "completed"}
+	if !reflect.DeepEqual(r, want) {
+		t.Fatalf("record=%+v want=%+v", r, want)
+	}
+}
+
+// When llm.request is present it stays authoritative: usage.record models
+// from older wires must not add a second, differently spelled entry.
+func TestReadKimiRecordLLMRequestWinsOverUsageModel(t *testing.T) {
+	home := writeKimiFixture(t, `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, `{"type":"llm.request","model":"kimi-for-coding","modelAlias":"kimi-code/kimi-for-coding"}
+{"type":"usage.record","model":"kimi-for-coding","usage":{"inputOther":1,"output":1},"usageScope":"turn"}
+`)
+	r, err := ReadKimiRecord(home, "session_abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(r.Models, []string{"kimi-code/kimi-for-coding"}) {
+		t.Fatalf("models=%v", r.Models)
+	}
+}

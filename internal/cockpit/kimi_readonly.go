@@ -124,7 +124,8 @@ func CheckKimiReadonly(home, sessionID string) error {
 		name := entry.Name()
 		found := false
 		err := readKimiReadOnlyJSON(root, filepath.Join(agents, name, "wire.jsonl"), func(event kimiReadOnlyEvent) error {
-			if event.Type == "llm.request" {
+			// kimi-code 2.7 records a model call only as usage.record.
+			if event.Type == "llm.request" || event.Type == "usage.record" {
 				id := event.AgentID
 				if id == "" {
 					id = name

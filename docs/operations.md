@@ -44,7 +44,8 @@ removes them from Codex Remote Control; ordinary completion only archives them
 and Remote Control can still show archived threads.** Kimi uses its local web
 delete API with a verified private-file fallback. OpenCode uses its native
 private server API. Agy removes only recognized private conversation and
-annotation files; an unsupported layout is retained with a failure. Non-Codex
+annotation files and the session's `brain/<id>/` directory; an unsupported layout
+is retained with a failure. Non-Codex
 sessions created with `--with-user-config` are retained because prune never
 cleans real user homes.
 

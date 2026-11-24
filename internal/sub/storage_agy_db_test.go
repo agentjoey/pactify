@@ -390,3 +390,236 @@ func TestStorageAgyAnnotationVerificationAndSafety(t *testing.T) {
 		t.Fatalf("directory annotation modified: %v", e)
 	}
 }
+
+func TestStorageAgyBrainCleanup(t *testing.T) {
+	s := storageStore(t)
+	t.Setenv("PATH", t.TempDir())
+	agyBase := filepath.Join(s.storageHome(), "harness-homes/agy/.gemini/antigravity-cli")
+	convDir := filepath.Join(agyBase, "conversations")
+	annDir := filepath.Join(agyBase, "annotations")
+	brainDir := filepath.Join(agyBase, "brain")
+	writeFile := func(path string, size int) {
+		t.Helper()
+		if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
+			t.Fatal(e)
+		}
+		if e := os.WriteFile(path, make([]byte, size), 0600); e != nil {
+			t.Fatal(e)
+		}
+	}
+	agyJob := func(id, session string, age time.Duration) {
+		t.Helper()
+		st := storageJob(t, s, id, StatusSucceeded, age)
+		st.Request.Harness = "agy"
+		st.HarnessHome = filepath.Join(s.storageHome(), "harness-homes", "agy")
+		if e := s.Save(st); e != nil {
+			t.Fatal(e)
+		}
+		if e := atomicJSON(s.ResultPath(id), Result{JobID: id, Status: st.Status, SessionID: session}); e != nil {
+			t.Fatal(e)
+		}
+	}
+	const (
+		orphanAllID   = "1705b9e8-e635-4a6f-af75-a0e97e809641"
+		orphanBrainID = "2705b9e8-e635-4a6f-af75-a0e97e809642"
+		retainedID    = "3705b9e8-e635-4a6f-af75-a0e97e809643"
+		expiredID     = "4705b9e8-e635-4a6f-af75-a0e97e809644"
+		innerLinkID   = "5705b9e8-e635-4a6f-af75-a0e97e809645"
+		linkID        = "6705b9e8-e635-4a6f-af75-a0e97e809646"
+		fileID        = "7705b9e8-e635-4a6f-af75-a0e97e809647"
+	)
+	// Orphan with conversation, annotation and a nested brain directory.
+	writeFile(filepath.Join(convDir, orphanAllID+".db"), 300)
+	writeFile(filepath.Join(annDir, orphanAllID+".pbtxt"), 70)
+	writeFile(filepath.Join(brainDir, orphanAllID, ".system_generated", "logs", "transcript.jsonl"), 100)
+	writeFile(filepath.Join(brainDir, orphanAllID, "scratch", "notes.md"), 20)
+	// Brain left behind by an earlier cleanup.
+	writeFile(filepath.Join(brainDir, orphanBrainID, "scratch", "x"), 50)
+	agyJob("retained", retainedID, time.Hour)
+	writeFile(filepath.Join(convDir, retainedID+".db"), 200)
+	writeFile(filepath.Join(brainDir, retainedID, "scratch", "x"), 40)
+	agyJob("expired", expiredID, 30*24*time.Hour)
+	writeFile(filepath.Join(brainDir, expiredID, "scratch", "x"), 60)
+
+	// Entries that must never be followed or removed.
+	outside := t.TempDir()
+	writeFile(filepath.Join(outside, "keep"), 7)
+	writeFile(filepath.Join(brainDir, innerLinkID, "scratch", "x"), 10)
+	if e := os.Symlink(outside, filepath.Join(brainDir, innerLinkID, "out")); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.Symlink(outside, filepath.Join(brainDir, linkID)); e != nil {
+		t.Fatal(e)
+	}
+	writeFile(filepath.Join(brainDir, fileID), 5)
+	ignoredDirs := []string{"not-a-uuid", "8705B9E8-e635-4a6f-af75-a0e97e809648", "8705b9e8e6354a6faf75a0e97e809648"}
+	for _, name := range ignoredDirs {
+		writeFile(filepath.Join(brainDir, name, "x"), 3)
+	}
+
+	plan, e := s.PlanStorage(context.Background(), PruneOptions{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	const rel = "harness-homes/agy/.gemini/antigravity-cli/brain/"
+	for _, id := range []string{orphanAllID, orphanBrainID} {
+		if it := storageItem(plan, rel+id); it == nil || it.Protected || it.Session != id || it.Reason != "orphan session in private harness home" {
+			t.Fatalf("expected reclaimable brain %s: %+v", id, it)
+		}
+	}
+	for _, id := range []string{retainedID, expiredID} {
+		if it := storageItem(plan, rel+id); it == nil || !it.Protected || it.Reason != "session referenced by an existing job" {
+			t.Fatalf("expected job-referenced brain protected %s: %+v", id, it)
+		}
+	}
+	if it := storageItem(plan, rel+innerLinkID); it == nil || !it.Protected || !strings.Contains(it.Reason, "symlink protected") {
+		t.Fatalf("brain with an inner symlink should be protected: %+v", it)
+	}
+	if it := storageItem(plan, rel+linkID); it == nil || !it.Protected || it.Session != "" || it.Reason != "symlink protected" {
+		t.Fatalf("symlinked brain should be protected: %+v", it)
+	}
+	if it := storageItem(plan, rel+fileID); it == nil || !it.Protected || it.Session != "" {
+		t.Fatalf("brain file should not be a session: %+v", it)
+	}
+	for _, name := range ignoredDirs {
+		if it := storageItem(plan, rel+name+"/x"); it == nil || !it.Protected || it.Session != "" {
+			t.Fatalf("unrecognized brain entry %s: %+v", name, it)
+		}
+	}
+
+	run, e := s.PruneStorage(context.Background(), PruneOptions{})
+	if e != nil || len(run.Failures) > 0 {
+		t.Fatalf("prune failed: %+v %v", run, e)
+	}
+	// orphanAll: conversation, annotation, brain; orphanBrain: brain; expired: brain.
+	if got := run.Removed[2]; got.Items != 5 || got.Sessions != 3 || got.Bytes != 600 {
+		t.Fatalf("unexpected harness-homes accounting: %+v", got)
+	}
+	for _, p := range []string{
+		filepath.Join(convDir, orphanAllID+".db"),
+		filepath.Join(annDir, orphanAllID+".pbtxt"),
+		filepath.Join(brainDir, orphanAllID),
+		filepath.Join(brainDir, orphanBrainID),
+		filepath.Join(brainDir, expiredID),
+	} {
+		if _, e := os.Lstat(p); !os.IsNotExist(e) {
+			t.Fatalf("expected removed %s: %v", p, e)
+		}
+	}
+	kept := []string{
+		filepath.Join(convDir, retainedID+".db"),
+		filepath.Join(brainDir, retainedID, "scratch", "x"),
+		filepath.Join(brainDir, innerLinkID, "scratch", "x"),
+		filepath.Join(brainDir, innerLinkID, "out"),
+		filepath.Join(brainDir, linkID),
+		filepath.Join(brainDir, fileID),
+		filepath.Join(outside, "keep"),
+	}
+	for _, name := range ignoredDirs {
+		kept = append(kept, filepath.Join(brainDir, name, "x"))
+	}
+	for _, p := range kept {
+		if _, e := os.Lstat(p); e != nil {
+			t.Fatalf("expected kept %s: %v", p, e)
+		}
+	}
+}
+
+func TestStorageAgyBrainProtectedWhenBusy(t *testing.T) {
+	s := storageStore(t)
+	t.Setenv("PATH", t.TempDir())
+	const id = "1805b9e8-e635-4a6f-af75-a0e97e809641"
+	brain := filepath.Join(s.storageHome(), "harness-homes/agy/.gemini/antigravity-cli/brain", id)
+	if e := os.MkdirAll(filepath.Join(brain, "scratch"), 0700); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(filepath.Join(brain, "scratch", "x"), []byte("busy"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	storageJob(t, s, "active", StatusRunning, 0)
+	plan, e := s.PlanStorage(context.Background(), PruneOptions{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if it := storageItem(plan, "harness-homes/agy/.gemini/antigravity-cli/brain/"+id); it == nil || !it.Protected || it.Reason != "running or queued jobs protect shared caches and homes" {
+		t.Fatalf("expected busy protection: %+v", it)
+	}
+	if _, e := s.PruneStorage(context.Background(), PruneOptions{}); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := os.Lstat(filepath.Join(brain, "scratch", "x")); e != nil {
+		t.Fatalf("busy prune removed brain: %v", e)
+	}
+}
+
+// A brain directory that cannot be removed safely is kept, but it must not stop
+// the rest of its session (and an expiring job) from being cleaned up.
+func TestStorageAgyProtectedBrainDoesNotBlockSession(t *testing.T) {
+	s := storageStore(t)
+	t.Setenv("PATH", t.TempDir())
+	agyBase := filepath.Join(s.storageHome(), "harness-homes/agy/.gemini/antigravity-cli")
+	writeFile := func(path string) {
+		t.Helper()
+		if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
+			t.Fatal(e)
+		}
+		if e := os.WriteFile(path, []byte("x"), 0600); e != nil {
+			t.Fatal(e)
+		}
+	}
+	outside := t.TempDir()
+	writeFile(filepath.Join(outside, "keep"))
+	const (
+		innerLinkID = "1905b9e8-e635-4a6f-af75-a0e97e809641"
+		credID      = "2905b9e8-e635-4a6f-af75-a0e97e809642"
+		linkID      = "3905b9e8-e635-4a6f-af75-a0e97e809643"
+		expiredID   = "4905b9e8-e635-4a6f-af75-a0e97e809644"
+	)
+	brain := func(id string) string { return filepath.Join(agyBase, "brain", id) }
+	conv := func(id string) string { return filepath.Join(agyBase, "conversations", id+".db") }
+	for _, id := range []string{innerLinkID, credID, linkID, expiredID} {
+		writeFile(conv(id))
+	}
+	writeFile(filepath.Join(brain(innerLinkID), "scratch", "x"))
+	if e := os.Symlink(outside, filepath.Join(brain(innerLinkID), "scratch", "out")); e != nil {
+		t.Fatal(e)
+	}
+	writeFile(filepath.Join(brain(credID), "scratch", "config.toml"))
+	if e := os.Symlink(outside, brain(linkID)); e != nil {
+		t.Fatal(e)
+	}
+	writeFile(filepath.Join(brain(expiredID), "scratch", "auth.json"))
+	st := storageJob(t, s, "expired", StatusSucceeded, 30*24*time.Hour)
+	st.Request.Harness = "agy"
+	st.HarnessHome = filepath.Join(s.storageHome(), "harness-homes", "agy")
+	if e := s.Save(st); e != nil {
+		t.Fatal(e)
+	}
+	if e := atomicJSON(s.ResultPath("expired"), Result{JobID: "expired", Status: st.Status, SessionID: expiredID}); e != nil {
+		t.Fatal(e)
+	}
+
+	run, e := s.PruneStorage(context.Background(), PruneOptions{})
+	if e != nil || len(run.Failures) > 0 {
+		t.Fatalf("prune failed: %+v %v", run, e)
+	}
+	for _, id := range []string{innerLinkID, credID, linkID, expiredID} {
+		if _, e := os.Lstat(conv(id)); !os.IsNotExist(e) {
+			t.Fatalf("conversation %s kept: %v", id, e)
+		}
+	}
+	if _, e := os.Lstat(s.Dir("expired")); !os.IsNotExist(e) {
+		t.Fatalf("expired job kept: %v", e)
+	}
+	for _, p := range []string{
+		filepath.Join(brain(innerLinkID), "scratch", "out"),
+		filepath.Join(brain(credID), "scratch", "config.toml"),
+		brain(linkID),
+		filepath.Join(brain(expiredID), "scratch", "auth.json"),
+		filepath.Join(outside, "keep"),
+	} {
+		if _, e := os.Lstat(p); e != nil {
+			t.Fatalf("expected kept %s: %v", p, e)
+		}
+	}
+}

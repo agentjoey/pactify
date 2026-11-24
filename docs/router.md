@@ -179,7 +179,9 @@ Discovery sends no inference requests:
 - Opencode starts an isolated server and reads v1 provider/config metadata or
   v2 model/default metadata, then stops the process group.
 
-Discovery uses a ten-minute cache and `?refresh=1` requests an explicit refresh.
+Discovery uses a ten-minute cache. `GET /api/sub/harnesses` and `GET /api/harnesses`
+ignore query parameters and return cached metadata; `POST /api/sub/harnesses/refresh`
+(registered only by `pactify serve`, never by the panel) requests an explicit refresh.
 Stale data can remain visible while refresh runs; failures preserve the last good
 models, efforts and native defaults. Uninstalled harnesses run no discovery.
 Installed versions use the normal version probe; verified versions come from
@@ -190,6 +192,7 @@ Serve also exposes the following POST endpoints; the panel registers none:
 
 | Path | Request and response |
 | --- | --- |
+| `/api/sub/harnesses/refresh` | Optional `{}`; refreshes harness versions and model catalogs, returns `{harnesses:[...]}` |
 | `/api/sub/jobs/{id}/cancel` | Optional `{}`; follows fallback to cancel the current attempt, returns `{ok:true}` |
 | `/api/sub/jobs/{id}/resume` | `{brief:"..."}`; starts a background job and returns `{jobId:"..."}` |
 | `/api/sub/jobs/{id}/apply` | Optional `{}`; applies safely to the source workspace, returns `{ok:true}` |

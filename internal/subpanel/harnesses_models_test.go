@@ -128,6 +128,20 @@ func TestHarnessesCodexKimiModelsAndCache(t *testing.T) {
 		t.Fatal(string(data))
 	}
 	rows = get("?refresh=1")
+	if rows["kimi"].Default.Model != "provider/first" {
+		t.Fatal("GET ?refresh=1 bypassed cache", rows["kimi"])
+	}
+	data, _ = os.ReadFile(calls)
+	if string(data) != "initialize\ninitialized\nmodel/list\n" {
+		t.Fatal("GET ?refresh=1 executed discovery:", string(data))
+	}
+	if w := request(server, "POST", "/api/harnesses/refresh", server.token); w.Code != 405 && w.Code != 404 {
+		t.Fatalf("panel POST /api/harnesses/refresh: %d %s", w.Code, w.Body.String())
+	}
+	if _, err := store.Harnesses(t.Context(), true); err != nil {
+		t.Fatal(err)
+	}
+	rows = get("")
 	if rows["kimi"].Default.Model != "provider/second" || !reflect.DeepEqual(rows["kimi"].Models.Items, []string{"provider/second"}) {
 		t.Fatal(rows["kimi"])
 	}
@@ -135,11 +149,15 @@ func TestHarnessesCodexKimiModelsAndCache(t *testing.T) {
 	if err := os.WriteFile(source, []byte("[providers.secret]\napi_key=\"PARSE_SECRET_SENTINEL"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	rows = get("?refresh=1")
+	if _, err := store.Harnesses(t.Context(), true); err != nil {
+		t.Fatal(err)
+	}
+	rows = get("")
 	if rows["codex"].Models.Error == "" || rows["kimi"].Models.Error != "kimi: invalid config.toml" || !reflect.DeepEqual(rows["codex"].Models.Items, codex.Models.Items) || !reflect.DeepEqual(rows["codex"].Efforts, codex.Efforts) || rows["kimi"].Default.Model != "provider/second" {
 		t.Fatal(rows)
 	}
 	get("")
+	get("?refresh=1")
 	data, _ = os.ReadFile(calls)
 	if strings.Count(string(data), "model/list\n") != 3 {
 		t.Fatal("failure was not cached", string(data))

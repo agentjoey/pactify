@@ -115,13 +115,15 @@ export function Settings({
     return () => controller.abort();
   }, [load]);
   async function refreshModels() {
+    if (!writable || !source.write) return;
     setBusy(true);
     setHarnessError("");
     try {
-      const response = await source.fetch(
-        harnessesPath + "?refresh=1",
-        new AbortController().signal,
-      );
+      const response = await source.write(harnessesPath + "/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       if (!response.ok) throw Error(await responseError(response));
       const next = await response.json();
       if (!Array.isArray(next.harnesses)) throw Error("Harnesses unavailable");

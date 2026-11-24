@@ -443,8 +443,13 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 		}
 		target := links[name].Target
 		if absent[name] {
-			// Drop only our own dangling link; a private copy is left for cleanup.
+			// Drop our own dangling link. A private copy left by an earlier
+			// process is dropped too when no other user holds the home.
 			if current, err := os.Readlink(path); err == nil && current == target {
+				if err = root.Remove(name); err != nil {
+					return err
+				}
+			} else if exclusive && dropOptionalCredentialCopy(links[name], path) {
 				if err = root.Remove(name); err != nil {
 					return err
 				}
@@ -745,6 +750,12 @@ func (m *managedHome) cleanupEntries() []string {
 		if info.Mode()&os.ModeSymlink != 0 {
 			continue
 		}
+		if link, explicit := m.Links[name]; explicit && dropOptionalCredentialCopy(link, path) {
+			if err = root.Remove(name); err != nil {
+				warnings = append(warnings, fmt.Sprintf("%s: could not remove %s from the private HOME: %v", m.Name, name, err))
+			}
+			continue
+		}
 		if link, explicit := m.Links[name]; explicit && link.Credential && !link.Directory && info.Mode().IsRegular() {
 			location, err := credentiallinks.Restore(path, link.Target, m.sources[name], m.QuarantineDir)
 			if err != nil {
@@ -776,6 +787,22 @@ func (m *managedHome) cleanupEntries() []string {
 		warnings = append(warnings, warning)
 	}
 	return warnings
+}
+
+// dropOptionalCredentialCopy reports whether path is a harness-written file for
+// an optional credential whose source is still absent. There is nothing to
+// return it to, and the login lives elsewhere (agy writes this file only when
+// saving a refreshed token to the OS keyring fails), so it is discarded.
+func dropOptionalCredentialCopy(link homeLink, path string) bool {
+	if !link.Optional || !link.Credential || link.Directory {
+		return false
+	}
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	_, err = os.Lstat(link.Target)
+	return os.IsNotExist(err)
 }
 
 // directories keeps the primary home contract used by older job records.

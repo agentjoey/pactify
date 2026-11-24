@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Storage cleanup now removes an agy session's annotation file with the session, and
+  reclaims annotations left behind by earlier cleanups.
 - The read-only panel no longer runs harness CLIs: `GET /harnesses` now reads cached
   metadata only (ignoring `?refresh=1`), and model refresh moved to
   `POST /api/sub/harnesses/refresh`, registered only by `pactify serve`.

@@ -64,8 +64,15 @@ func (s Store) planHomes(p *StoragePlan, scan *storageScanner, states map[string
 		if len(parts) == 5 && (parts[1] == "kimi" || parts[1] == "kimi-readonly") && parts[2] == "sessions" && info.IsDir() {
 			sid = parts[4]
 		}
-		if len(parts) >= 6 && parts[1] == "agy" && parts[2] == ".gemini" && parts[3] == "antigravity-cli" && parts[4] == "conversations" && len(parts) == 6 {
-			sid, _ = agyConversationID(parts[5])
+		if len(parts) == 6 && parts[1] == "agy" && parts[2] == ".gemini" && parts[3] == "antigravity-cli" {
+			switch parts[4] {
+			case "conversations":
+				sid, _ = agyConversationID(parts[5])
+			case "annotations":
+				if info.Mode().IsRegular() {
+					sid, _ = agyAnnotationID(parts[5])
+				}
+			}
 		}
 		if sid != "" {
 			size, _, e := scan.tree(path)
@@ -329,18 +336,19 @@ func (s Store) deletePrivateSessionFiles(ctx context.Context, r *os.Root, harnes
 		}
 		for _, id := range ids {
 			found := false
-			for _, name := range agyConversationNames(id) {
-				path := filepath.Join(home, ".gemini", "antigravity-cli", "conversations", name)
-				if err := storageRealPath(r, path); os.IsNotExist(err) {
+			for _, path := range agySessionPaths(home, id) {
+				info, _, ok, err := storageAgySessionFile(ctx, r, path)
+				if err != nil {
+					return err
+				}
+				if !ok {
 					continue
-				} else if err != nil {
-					return err
 				}
-				scan := storageScanner{ctx, r, 200000}
-				if _, _, err := scan.tree(path); err != nil {
-					return err
+				var expected []os.FileInfo
+				if info != nil {
+					expected = []os.FileInfo{info}
 				}
-				if err := storageRemove(r, path); err != nil {
+				if err := storageRemove(r, path, expected...); err != nil {
 					return err
 				}
 				found = true
@@ -686,17 +694,14 @@ func storageSamePath(a, b string) bool {
 func storageVerifyAgy(ctx context.Context, r *os.Root, home string, ids []string) error {
 	for _, id := range ids {
 		found := false
-		for _, name := range agyConversationNames(id) {
-			p := filepath.Join(home, ".gemini/antigravity-cli/conversations", name)
-			if e := storageRealPath(r, p); os.IsNotExist(e) {
-				continue
-			} else if e != nil {
+		for _, p := range agySessionPaths(home, id) {
+			_, _, ok, e := storageAgySessionFile(ctx, r, p)
+			if e != nil {
 				return e
 			}
-			if _, _, e := (&storageScanner{ctx, r, 200000}).tree(p); e != nil {
-				return e
+			if ok {
+				found = true
 			}
-			found = true
 		}
 		if !found {
 			done, e := storageAgyReceipts(r, home)
@@ -848,9 +853,13 @@ func (s Store) deletePrivateSessionsMeasured(ctx context.Context, r *os.Root, ha
 		}
 	case "agy":
 		for _, id := range ids {
-			for _, name := range agyConversationNames(id) {
-				if e := add(filepath.Join(home, ".gemini/antigravity-cli/conversations", name), id); e != nil {
+			for _, path := range agySessionPaths(home, id) {
+				_, size, ok, e := storageAgySessionFile(ctx, r, path)
+				if e != nil {
 					return out, e
+				}
+				if ok {
+					files = append(files, file{path, id, size})
 				}
 			}
 		}
@@ -902,4 +911,85 @@ func agyConversationID(name string) (string, bool) {
 		return name, true
 	}
 	return "", false
+}
+
+// agyIsUUID matches a strict lowercase 8-4-4-4-12 hex UUID.
+func agyIsUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return false
+			}
+			continue
+		}
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return true
+}
+
+// agyAnnotationID recognizes only <uuid>.pbtxt in annotations/.
+func agyAnnotationID(name string) (string, bool) {
+	id, ok := strings.CutSuffix(name, ".pbtxt")
+	if !ok || !agyIsUUID(id) {
+		return "", false
+	}
+	return id, true
+}
+
+// agySessionPaths lists all verified private paths that belong to an agy
+// session: its documented conversation names plus its lowercase-UUID annotation.
+func agySessionPaths(home, id string) []string {
+	base := filepath.Join(home, ".gemini", "antigravity-cli")
+	names := agyConversationNames(id)
+	paths := make([]string, 0, len(names)+1)
+	for _, name := range names {
+		paths = append(paths, filepath.Join(base, "conversations", name))
+	}
+	if agyIsUUID(id) {
+		paths = append(paths, filepath.Join(base, "annotations", id+".pbtxt"))
+	}
+	return paths
+}
+
+func isAgyAnnotationPath(path string) bool {
+	return filepath.Base(filepath.Dir(path)) == "annotations"
+}
+
+// storageAgySessionFile validates one candidate path from agySessionPaths.
+// Annotation entries must be regular files; subdirectories under annotations/
+// are left untouched. Symlinks and special files fail closed.
+func storageAgySessionFile(ctx context.Context, r *os.Root, path string) (os.FileInfo, int64, bool, error) {
+	if err := storageRealPath(r, path); os.IsNotExist(err) {
+		return nil, 0, false, nil
+	} else if err != nil {
+		return nil, 0, false, err
+	}
+	var info os.FileInfo
+	if isAgyAnnotationPath(path) {
+		var err error
+		info, err = r.Lstat(path)
+		if os.IsNotExist(err) {
+			return nil, 0, false, nil
+		}
+		if err != nil {
+			return nil, 0, false, err
+		}
+		if info.IsDir() {
+			return nil, 0, false, nil
+		}
+	}
+	size, _, err := (&storageScanner{ctx, r, 200000}).tree(path)
+	if os.IsNotExist(err) {
+		return nil, 0, false, nil
+	}
+	if err != nil {
+		return nil, 0, false, err
+	}
+	return info, size, true, nil
 }

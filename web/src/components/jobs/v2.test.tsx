@@ -557,23 +557,28 @@ it("uses activity usage for retrying and advances elapsed time every second", as
 it("supports failed model discovery, refresh, manual entry and Harness default clearing", async () => {
   const src = source();
   let broken = true;
+  const harnessesPayload = () => ({
+    harnesses: [
+      {
+        ...harness,
+        models: {
+          items: [],
+          error: broken ? "Discovery failed" : "",
+        },
+      },
+    ],
+  });
   src.fetch.mockImplementation(
     async (path) =>
       new Response(
+        JSON.stringify(path.includes("harnesses") ? harnessesPayload() : snapshot),
+      ),
+  );
+  src.write.mockImplementation(
+    async (path) =>
+      new Response(
         JSON.stringify(
-          path.includes("harnesses")
-            ? {
-                harnesses: [
-                  {
-                    ...harness,
-                    models: {
-                      items: [],
-                      error: broken ? "Discovery failed" : "",
-                    },
-                  },
-                ],
-              }
-            : snapshot,
+          path === "/harnesses/refresh" ? harnessesPayload() : { jobId: "next" },
         ),
       ),
   );
@@ -591,9 +596,13 @@ it("supports failed model discovery, refresh, manual entry and Harness default c
   broken = false;
   fireEvent.click(screen.getByRole("button", { name: "Refresh models" }));
   await act(async () => {});
-  expect(src.fetch).toHaveBeenCalledWith(
+  expect(src.write).toHaveBeenCalledWith(
+    "/harnesses/refresh",
+    expect.objectContaining({ method: "POST" }),
+  );
+  expect(src.fetch).not.toHaveBeenCalledWith(
     "/harnesses?refresh=1",
-    expect.any(AbortSignal),
+    expect.anything(),
   );
   fireEvent.change(screen.getByLabelText("codex Default model"), {
     target: { value: "" },
@@ -604,7 +613,7 @@ it("supports failed model discovery, refresh, manual entry and Harness default c
   fireEvent.click(screen.getByRole("button", { name: "Save defaults" }));
   await act(async () => {});
   expect(
-    JSON.parse(src.write.mock.calls[1][1].body as string).config.defaults,
+    JSON.parse(src.write.mock.calls[2][1].body as string).config.defaults,
   ).toEqual({});
 });
 it("shows a finished card with a pending worktree as Done with its diff, Review and no approval buttons", async () => {

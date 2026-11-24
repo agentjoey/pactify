@@ -136,31 +136,40 @@ export function createJobsAPI(writable = false) {
   let jobs = seedJobs(),
     next = 0;
   const handler = async (req, res, path) => {
-    if (!/^\/api\/(jobs(?:\/|$)|cost$|harnesses$)/.test(path)) return false;
+    if (!/^\/api\/(jobs(?:\/|$)|cost$|harnesses(?:\/refresh)?$)/.test(path)) return false;
     const url = new URL(req.url, "http://localhost");
+    const harnessesPayload = () => ({
+      harnesses: ["codex", "kimi", "agy", "opencode", "dsh"].map((name, i) => ({
+        name,
+        installed: i !== 2,
+        version: "1.0",
+        verifiedVersion: i === 0 ? "0.9" : "1.0",
+        experimental: name === "agy",
+        readOnly: name !== "kimi",
+        default: {},
+        models: {
+          items:
+            i === 0
+              ? ["gpt-6.1-sol", "gpt-6-sol", LONG_MODEL]
+              : i === 3
+                ? ["model-one", "model-two", LONG_MODEL]
+                : ["model-one", "model-two"],
+          error: "",
+          fetchedAt: new Date().toISOString(),
+        },
+        efforts: ["low", "medium", "high"],
+      })),
+    });
     if (req.method === "GET" && path === "/api/harnesses") {
-      send(res, 200, {
-        harnesses: ["codex", "kimi", "agy", "opencode", "dsh"].map((name, i) => ({
-          name,
-          installed: i !== 2,
-          version: "1.0",
-          verifiedVersion: i === 0 ? "0.9" : "1.0",
-          experimental: name === "agy",
-          readOnly: name !== "kimi",
-          default: {},
-          models: {
-            items:
-              i === 0
-                ? ["gpt-6.1-sol", "gpt-6-sol", LONG_MODEL]
-                : i === 3
-                  ? ["model-one", "model-two", LONG_MODEL]
-                  : ["model-one", "model-two"],
-            error: "",
-            fetchedAt: new Date().toISOString(),
-          },
-          efforts: ["low", "medium", "high"],
-        })),
-      });
+      send(res, 200, harnessesPayload());
+      return true;
+    }
+    if (path === "/api/harnesses/refresh") {
+      if (!writable || req.method !== "POST") {
+        send(res, 405, { error: "method not allowed" });
+        return true;
+      }
+      send(res, 200, harnessesPayload());
       return true;
     }
     if (req.method === "GET" && path === "/api/cost") {

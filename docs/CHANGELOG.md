@@ -4,6 +4,9 @@
 
 - Storage cleanup now removes an agy session's annotation file with the session, and
   reclaims annotations left behind by earlier cleanups.
+- The read-only panel no longer runs harness CLIs: `GET /harnesses` now reads cached
+  metadata only (ignoring `?refresh=1`), and model refresh moved to
+  `POST /api/sub/harnesses/refresh`, registered only by `pactify serve`.
 - kimi-code 2.7 no longer writes `llm.request` to its session wire, so Pactify could not
   confirm the model a kimi job used and `pactify sub doctor kimi` reported the Model check
   as failed. The model now also comes from the per-turn `usage.record`, which 2.7 tags with

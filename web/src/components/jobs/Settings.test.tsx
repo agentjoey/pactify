@@ -116,3 +116,26 @@ it("keeps the exact Defaults saved confirmation visible after saving", async () 
   fireEvent.click(await screen.findByRole("button", {name:"Save defaults"}));
   expect(await screen.findByText("Defaults saved", {exact:true})).toBeVisible();
 });
+
+it("refreshes models using POST /harnesses/refresh through source.write", async () => {
+  const refreshed = { ...harness, stale: false, models: { items: ["argon-low", "argon-ultra"], error: "" } };
+  const write = vi.fn(async () => Response.json({ harnesses: [refreshed] }));
+  const fetcher = vi.fn(async (path: string) => Response.json(path.includes("harnesses") ? { harnesses: [harness] } : path.endsWith("doctor") ? { lastRun: null, harnesses: [] } : snapshot));
+  const source: JobsSource = {
+    jobsPath: "/jobs", costPath: "/cost", routerPath: "/router", harnessesPath: "/harnesses",
+    fetch: fetcher,
+    write,
+  };
+  render(<Settings source={source} />);
+  const refresh = await screen.findByRole("button", { name: "Refresh models" });
+  fireEvent.click(refresh);
+  expect(await within(screen.getByLabelText("agy Default model")).findByRole("option", { name: "argon-ultra" })).toBeInTheDocument();
+  expect(write).toHaveBeenCalledWith(
+    "/harnesses/refresh",
+    expect.objectContaining({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+  expect(fetcher).not.toHaveBeenCalledWith("/harnesses?refresh=1", expect.anything());
+});

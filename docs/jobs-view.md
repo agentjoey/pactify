@@ -96,9 +96,10 @@ Both hosts mount the same `subpanel.ReadOnlyHandler`:
 | diff | `/api/sub/jobs/<id>/diff` | `/api/jobs/<id>/diff` |
 | Doctor snapshot | `/api/sub/doctor` | `/api/doctor` |
 | CLI version | `/api/sub/info` | `/api/info` |
-| Harness status / models | `/api/sub/harnesses` (`?refresh=1` to refresh) | `/api/harnesses` |
+| Harness status / models | `GET /api/sub/harnesses` (cached) | `GET /api/harnesses` |
 | Router configuration | `GET /api/sub/router` | `GET /api/router` |
 | Usage summary | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
+| Refresh harness models | `POST /api/sub/harnesses/refresh` | Not registered |
 | Save router / defaults | `PUT /api/sub/router` | Not registered |
 | Clear exhaustion records | `DELETE /api/sub/quota/<encoded-key>` | Not registered |
 | Job actions | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard,dismiss}` | Not registered |

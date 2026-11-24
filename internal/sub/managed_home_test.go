@@ -175,6 +175,38 @@ func TestManagedHomeOptionalCredentialLink(t *testing.T) {
 		t.Fatal(warnings)
 	}
 
+	// agy writes a refreshed token here when the keyring save fails. With no
+	// source to return it to, cleanup discards it instead of quarantining it.
+	if err := m.Prepare(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("refreshed"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if warnings := m.Cleanup(); len(warnings) != 0 {
+		t.Fatalf("refreshed copy warnings: %v", warnings)
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatalf("refreshed copy kept: %v", err)
+	}
+	if _, err := os.Stat(m.QuarantineDir); !os.IsNotExist(err) {
+		t.Fatalf("refreshed copy quarantined: %v", err)
+	}
+	// A copy left by a process that exited before cleanup is dropped on setup.
+	if err := os.WriteFile(path, []byte("leftover"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Prepare(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatalf("leftover copy kept: %v", err)
+	}
+	if err := m.Check(); err != nil {
+		t.Fatal(err)
+	}
+	m.Cleanup()
+
 	if err := os.MkdirAll(filepath.Dir(token), 0700); err != nil {
 		t.Fatal(err)
 	}

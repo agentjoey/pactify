@@ -21,6 +21,10 @@
   is kept in the OS keyring. agy 1.5.15 can store its login there instead of
   `~/.gemini/antigravity-cli/antigravity-oauth-token`; Pactify now links that file only
   when it exists and leaves a missing login for agy itself to report.
+- With a keyring sign-in, an agy job no longer ends with a "credential refresh
+  quarantined" warning. When agy cannot save a refreshed token to the keyring it writes a
+  token file in the job's private home; with no user token file to return it to,
+  Pactify now deletes that copy instead of moving it to `~/.pactify/credential-quarantine`.
 - The reviewed opencode 2.x contract moves to 2.3.2 after doctor passed every check on
   it. The only consumed-schema change is a new open-ended `video` model type.
 - Worktree jobs repair a `.git` link file that the harness deleted or corrupted. Pactify

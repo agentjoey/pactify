@@ -72,6 +72,10 @@ func (s Store) planHomes(p *StoragePlan, scan *storageScanner, states map[string
 				if info.Mode().IsRegular() {
 					sid, _ = agyAnnotationID(parts[5])
 				}
+			case "brain":
+				if info.IsDir() && agyIsUUID(parts[5]) {
+					sid = parts[5]
+				}
 			}
 		}
 		if sid != "" {
@@ -943,35 +947,54 @@ func agyAnnotationID(name string) (string, bool) {
 }
 
 // agySessionPaths lists all verified private paths that belong to an agy
-// session: its documented conversation names plus its lowercase-UUID annotation.
+// session: its documented conversation names plus, for a lowercase-UUID id, its
+// annotation file and its brain directory (transcripts, step output, scratch).
 func agySessionPaths(home, id string) []string {
 	base := filepath.Join(home, ".gemini", "antigravity-cli")
 	names := agyConversationNames(id)
-	paths := make([]string, 0, len(names)+1)
+	paths := make([]string, 0, len(names)+2)
 	for _, name := range names {
 		paths = append(paths, filepath.Join(base, "conversations", name))
 	}
 	if agyIsUUID(id) {
-		paths = append(paths, filepath.Join(base, "annotations", id+".pbtxt"))
+		paths = append(paths, filepath.Join(base, "annotations", id+".pbtxt"), filepath.Join(base, "brain", id))
 	}
 	return paths
 }
 
-func isAgyAnnotationPath(path string) bool {
-	return filepath.Base(filepath.Dir(path)) == "annotations"
+// storageAgySessionFile validates one candidate path from agySessionPaths.
+// An annotation must be a regular file and a brain entry a directory; any other
+// type there is left untouched. Symlinks and special files fail closed, except
+// that a brain directory holding one (agents write freely in scratch/) is only
+// kept, so it does not block removing the rest of its session.
+func storageAgySessionFile(ctx context.Context, r *os.Root, path string) (os.FileInfo, int64, bool, error) {
+	info, size, ok, err := storageAgySessionEntry(ctx, r, path)
+	if err != nil && filepath.Base(filepath.Dir(path)) == "brain" && storageProtectionError(err) {
+		return nil, 0, false, nil
+	}
+	return info, size, ok, err
 }
 
-// storageAgySessionFile validates one candidate path from agySessionPaths.
-// Annotation entries must be regular files; subdirectories under annotations/
-// are left untouched. Symlinks and special files fail closed.
-func storageAgySessionFile(ctx context.Context, r *os.Root, path string) (os.FileInfo, int64, bool, error) {
+// storageProtectionError reports the refusals of storageRealPath and
+// storageScanner.tree, as opposed to I/O failures.
+func storageProtectionError(err error) bool {
+	msg := err.Error()
+	for _, prefix := range []string{"symlink protected: ", "credential protected: ", "special file protected: "} {
+		if strings.HasPrefix(msg, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func storageAgySessionEntry(ctx context.Context, r *os.Root, path string) (os.FileInfo, int64, bool, error) {
 	if err := storageRealPath(r, path); os.IsNotExist(err) {
 		return nil, 0, false, nil
 	} else if err != nil {
 		return nil, 0, false, err
 	}
 	var info os.FileInfo
-	if isAgyAnnotationPath(path) {
+	if kind := filepath.Base(filepath.Dir(path)); kind == "annotations" || kind == "brain" {
 		var err error
 		info, err = r.Lstat(path)
 		if os.IsNotExist(err) {
@@ -980,7 +1003,7 @@ func storageAgySessionFile(ctx context.Context, r *os.Root, path string) (os.Fil
 		if err != nil {
 			return nil, 0, false, err
 		}
-		if info.IsDir() {
+		if info.IsDir() != (kind == "brain") {
 			return nil, 0, false, nil
 		}
 	}

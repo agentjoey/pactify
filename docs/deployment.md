@@ -8,7 +8,10 @@ curl -fsSL https://pactify.dev/install.sh | sh
 go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```
 
-The current release is v0.13.0. See [CHANGELOG](CHANGELOG.md).
+Both commands install the latest published release; rerun either one to upgrade.
+To pin a version, set `PACTIFY_VERSION=vX.Y.Z` for the installer or use
+`@vX.Y.Z` with `go install`. Check the result with `pactify version`; release notes
+are in the [CHANGELOG](CHANGELOG.md).
 Install and authenticate a supported harness CLI, then run
 `pactify sub doctor <harness>`; probes may consume model quota.
 

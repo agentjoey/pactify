@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.15.1 — 2026-11-26
+
+Fixes and compatibility updates: agy keyring sign-ins and storage cleanup, kimi-code 2.7
+model detection, worktree `.git` link repair, and refreshed codex, opencode, kimi and agy
+baselines. The plugin is unchanged (0.7.0).
+
 - Storage cleanup now removes an agy session's annotation file and `brain/<id>/` directory
   (transcripts, step output and scratch files) with the session, and reclaims those left
   behind by earlier cleanups.

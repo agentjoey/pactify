@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- An agy job that cannot find a usable Google sign-in is now classified as an
+  authentication failure. agy 1.5.18 reports `authentication failed or timed out`,
+  which was classified as `other`, so the summary did not point to signing in again.
+
 ## v0.15.1 — 2026-11-26
 
 Fixes and compatibility updates: agy keyring sign-ins and storage cleanup, kimi-code 2.7

@@ -587,6 +587,9 @@ var agyFailureRules = []failureRule{
 	{"run agy login first", "auth"},
 	// Confirmed by the official CHANGELOG, version 1.3.3.
 	{"authentication expired. please log back in.", "auth"},
+	// agy 1.5.18 headless result when no usable sign-in is found (stderr adds
+	// "authentication required. Run 'agy' to log in").
+	{"authentication failed or timed out", "auth"},
 	{"unavailable (code 503)", "transient"},
 	{"your previous response contained an improperly formatted function call: malformed function call:", "transient"},
 	{": eof", "transient"},

@@ -75,7 +75,8 @@ Render a compact Markdown table with these six columns and at most 10 rows:
   never an invented zero. Terminal zeroes may mean no recorded result, so show `0 (unrecorded
   or zero)` rather than claiming verified zero usage. Queued usage is unknown.
 - Activity / attention: use `activity.summary` while running. For terminal jobs classify by
-  `attention.kind`, not message text: `worktree_pending`, `failed`, `warnings`.
+  `attention.kind`, not message text: `worktree_pending`, `failed`, `warnings`,
+  `outside_changes`.
   Mark pending matters with **⚠ needs attention** and a short summary of every applicable kind;
   `attention.message` can supply the explanation. No attention/activity: `—`.
 - Flatten newlines, escape Markdown pipes and markup from data, truncate title/activity cells
@@ -154,6 +155,10 @@ shares it, including turns outside the displayed list. Keep suggestions short an
   Never claim independent model verification from `modelActual` alone.
   After the host has reviewed and nothing more is needed, suggest `pactify sub dismiss <id>`
   to clear attention; apply or discard also clears it. Dismiss leaves a pending worktree pending.
+- `outside_changes`: “N jobs changed files outside the workspace: inspect `outsideChanges`
+  in `pactify sub result <id> --json` before running git or opening a new shell.” List the
+  paths. Never revert or delete them yourself; the user decides. Suggest
+  `pactify sub dismiss <id>` only after the user has reviewed them.
 - Running/queued with no attention: suggest checking `/jobs <id>` later. If abandonment
   is requested separately, suggest `pactify sub cancel <id>` before discard; do not execute it.
 - No pending matters: say no action is indicated by the recorded attention. An applied

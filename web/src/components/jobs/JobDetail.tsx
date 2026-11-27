@@ -17,7 +17,12 @@ interface Detail {
   brief: string;
   markdown: string;
   resultError?: string;
-  result?: { finalText?: string; warnings?: string[]; costUSD?: number };
+  result?: {
+    finalText?: string;
+    warnings?: string[];
+    costUSD?: number;
+    outsideChanges?: { path: string; change: string }[];
+  };
 }
 const tabs = ["Summary", "Live", "Logs", "Diff", "Brief"];
 export function JobDetail({
@@ -187,6 +192,24 @@ export function JobDetail({
                     </pre>
                     {data.resultError && <p role="alert">{data.resultError}</p>}
                   </section>
+                  {!!data.result?.outsideChanges?.length && (
+                    <section className="panel-section outside-changes" role="alert">
+                      <h2>Changes outside the workspace</h2>
+                      <p>
+                        These files changed while the job ran. This harness has no OS
+                        sandbox; another process may also be responsible. Review them
+                        before running git or opening a new shell.
+                      </p>
+                      <ul>
+                        {data.result.outsideChanges.map((c) => (
+                          <li key={c.path}>
+                            <span className="outside-change-kind">{c.change}</span>{" "}
+                            <code>{c.path}</code>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
                   {!!data.result?.warnings?.length && (
                     <section className="panel-section">
                       <h2>Warnings</h2>

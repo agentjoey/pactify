@@ -66,9 +66,10 @@ A single job remains an object, retaining the existing fields of the complete St
 | `worktree_pending` | the job has finished and the worktree has not recorded apply or discard |
 | `failed` | the job status is failed and it has not yet been acknowledged as handled |
 | `warnings` | the result contains at least one warning that needs handling and it has not yet been acknowledged as handled |
+| `outside_changes` | the result lists files outside the workspace that changed while the job ran (see below) and it has not yet been acknowledged as handled; it replaces `warnings` attention for that job |
 
 A terminal job counts as acknowledged when its `dismissedAt` is non-zero, or when the worktree status is `applied` / `discarded`,
-and no longer produces `failed` / `warnings` attention. The `worktree_pending` rule is unchanged.
+and no longer produces `failed` / `warnings` / `outside_changes` attention. The `worktree_pending` rule is unchanged.
 The summary's `actions` array includes `dismiss` only for terminal jobs with unacknowledged failure or actionable warnings, and for any undismissed job with a pending worktree. Applied or discarded worktrees already acknowledge those issues, so they do not offer Dismiss. Serve accepts `POST /api/sub/jobs/{id}/dismiss` with an optional empty JSON object; it uses the same acknowledgement operation as `pactify sub dismiss <id>`. The result and worktree remain unchanged; the read-only panel registers no write endpoint.
 Apply and discard mark all existing turns that share the worktree, so failures and warnings from those turns also clear attention;
 new resume turns are still handled according to their own pending status. Fields such as `status`, `failureClass` and `warningCount` keep their original values.
@@ -252,6 +253,27 @@ and is counted separately from the worker's single empty-reply follow-up.
 ## Sandbox fields in the result envelope
 
 `result.json` and `pactify sub result --json` always include the boolean field `sandboxed`: true for codex and false for other harnesses.
+
+### Changes outside the workspace
+
+Harnesses without an OS sandbox (agy, kimi, opencode) can write anywhere the user can.
+Pactify cannot prevent this, but it checks the places where a stray write does lasting
+harm. When the worker starts such a job, it records a fingerprint (content hash and
+permissions, without following symbolic links) of:
+
+- the repository's git control files in the git common directory: `hooks/`, `config`
+  and `info/`;
+- in the user's home: `.zshrc`, `.zshenv`, `.zprofile`, `.zlogin`, `.bashrc`,
+  `.bash_profile`, `.profile`, `.gitconfig`, `.config/git/`, `.ssh/` (except
+  `known_hosts`) and `Library/LaunchAgents/`.
+
+When the job finishes, including after worker recovery, the same locations are checked
+again. Each changed path is listed in `outsideChanges` (`path` and `change`: `added`,
+`modified` or `removed`) in `result.json` and `pactify sub result --json`, and one
+warning summarizes them. The check only detects changes; it does not block or undo
+them, and another process running at the same time can cause the same report. Codex and
+dsh jobs, which run in their own OS sandbox, are not checked. If no fingerprint was
+recorded, the warning `Files outside the workspace were not checked` says so.
 It declares OS sandbox capability and is independent of the requested access. opencode read-only relies on plan, permission denials and a final diff check;
 side effects outside the repository have no OS-level restriction. ACP's cumulative final text is published with the terminal event's `text` / `final`, and event backpressure does not lose text or tool counts.
 

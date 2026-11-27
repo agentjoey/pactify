@@ -41,6 +41,7 @@ type Request struct {
 
 type State struct {
 	ReadOnlyBaseline     *ReadOnlySnapshot `json:"readOnlyBaseline,omitempty"`
+	OutsideBaseline      *OutsideSnapshot  `json:"outsideBaseline,omitempty"`
 	Routing              *Routing          `json:"routing,omitempty"`
 	Baseline             *Snapshot         `json:"baseline,omitempty"`
 	RouteWarnings        []string          `json:"routeWarnings,omitempty"`

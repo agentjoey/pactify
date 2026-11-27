@@ -11,7 +11,7 @@ Both builds default to **dark**, independently of the OS. Choose **light** or **
 | Station | Jobs |
 | --- | --- |
 | 01 Running | `queued`, `running` or `retrying`, even with attention |
-| 02 Needs you | Other statuses with an unacknowledged failure or warnings |
+| 02 Needs you | Other statuses with an unacknowledged failure, warnings or changes outside the workspace |
 | 03 In review | Other statuses with a pending worktree, not dismissed: the delegating session has yet to apply or discard it |
 | 04 Shipped | Everything else, including dismissed jobs |
 

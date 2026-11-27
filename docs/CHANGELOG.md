@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.16.0 — 2026-11-27
+
+agy becomes a supported harness after passing the promotion gate on agy 1.5.18, with
+Claude Code plugin 0.8.0, plus agy 1.5.18 compatibility fixes for sign-in failures and
+the doctor read-only hook check.
+
 - agy is now a supported harness. It passed the promotion gate on agy 1.5.18 with
   `gemini-4-neon-high`: the live lifecycle and isolation suite (14 scenarios) and three
   endurance tasks. Job summaries no longer call agy experimental and keep a plain

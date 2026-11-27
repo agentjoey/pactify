@@ -421,6 +421,13 @@ export function createJobsAPI(writable = false) {
       result: {
         finalText: "Completed the task.",
         warnings: job.id === "job-failed" ? ["Review failed checks"] : [],
+        outsideChanges:
+          job.id === "job-failed"
+            ? [
+                { path: "/workspace/pactify/.git/hooks/pre-commit", change: "added" },
+                { path: "/home/dev/.zshrc", change: "modified" },
+              ]
+            : [],
       },
     });
     return true;

@@ -8,12 +8,18 @@ import type { Job } from "./types";
 const job = (id: string, extra: Partial<Job> = {}): Job => ({id,title:id,status:"succeeded",repo:"/repo/pactify",harness:"codex",modelRequested:"model",cwd:"/repo",access:"write",configMode:"minimal",duration:"1m",createdAt:new Date().toISOString(),inputTokens:0,outputTokens:0,attention:[],resumeOf:"",resumedBy:[],...extra});
 afterEach(() => { cleanup(); localStorage.clear(); history.replaceState(null,"","/"); });
 for (const status of ["queued","running","retrying","succeeded","failed","canceled"])
-  for (const kind of ["", "worktree_pending", "failed", "quota", "warnings"])
+  for (const kind of ["", "worktree_pending", "failed", "quota", "warnings", "outside_changes"])
     it(`maps ${status}/${kind || 'none'} to the existing section rule`, () => {
       const expected = ["queued","running","retrying"].includes(status) ? "Running" : kind && kind !== "worktree_pending" ? "Needs you" : kind ? "In review" : "Shipped";
       const worktree = kind === "worktree_pending" ? {path:"/wt",baseCommit:"abc",status:"pending"} : undefined;
       expect(stations.find(s => s.key === stationFor(job("a", {status,worktree,attention:kind ? [{kind,message:kind}] : []})))?.name).toBe(expected);
     });
+it("marks jobs with writes outside the workspace with an error pill", () => {
+  render(<JobList jobs={[job("outside",{status:"failed",attention:[{kind:"outside_changes",message:"2 file(s) outside the workspace changed during the job"}]})]}/>);
+  const pill = screen.getByText("outside writes");
+  expect(pill.closest(".status-pill")).toHaveClass("tone-err");
+  expect(screen.getByText("2 file(s) outside the workspace changed during the job")).toBeInTheDocument();
+});
 it("groups lines by project name, harness and one line", () => {
   const jobs = [job("a",{createdAt:"2026-10-01T00:00:00Z"}), job("b",{repo:"/other/pactify",harness:"kimi",createdAt:"2026-10-02T00:00:00Z"}),job("c",{repo:"/repo/tool",createdAt:"2026-10-03T00:00:00Z"})];
   expect(groupLines(jobs,"project", Date.parse("2026-10-29T00:00:00Z")).map(l => [l.name,l.jobs.length])).toEqual([["tool",1],["pactify",2]]);

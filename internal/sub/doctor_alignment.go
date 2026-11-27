@@ -20,7 +20,7 @@ func alignDoctorChecks(r DoctorReport) DoctorReport {
 		checks["Read-only hook"] = DoctorCheck{"Read-only hook", "SKIP", "not applicable: only agy installs a read-only hook"}
 	}
 	sandbox := DoctorCheck{"Sandbox", "WARN", "not sandboxed: writes are not confined by the OS"}
-	if r.Harness == "codex" || r.Harness == "dsh" {
+	if osSandboxed(r.Harness) {
 		sandbox.Status = "PASS"
 		sandbox.Reason = "sandboxed: native read-only / workspace-write OS sandbox"
 	}

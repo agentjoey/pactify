@@ -80,6 +80,17 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 
 	req := st.Request
+	if requiresOutsideBaseline(req) {
+		// Capture before any harness process starts. A missing baseline is
+		// reported when the job finishes; it never blocks the job.
+		if baseline, e := captureOutside(req.Cwd); e == nil {
+			_ = store.WithState(ctx, id, func(current *State) error {
+				current.OutsideBaseline = baseline
+				return store.Save(*current)
+			})
+			st.OutsideBaseline = baseline
+		}
+	}
 	retryLimit := DefaultRetries
 	if req.Retries != nil {
 		retryLimit = *req.Retries

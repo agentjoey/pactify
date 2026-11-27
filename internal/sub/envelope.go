@@ -47,6 +47,7 @@ type Result struct {
 	LogPath         string                     `json:"logPath"`
 	RateLimit       string                     `json:"rateLimit,omitempty"`
 	Warnings        []string                   `json:"warnings,omitempty"`
+	OutsideChanges  []OutsideChange            `json:"outsideChanges,omitempty"`
 	WorktreePath    string                     `json:"worktreePath,omitempty"`
 	BaseCommit      string                     `json:"baseCommit,omitempty"`
 

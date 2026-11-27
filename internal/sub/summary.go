@@ -75,6 +75,7 @@ const (
 	AttentionWorktreePending AttentionKind = "worktree_pending"
 	AttentionFailed          AttentionKind = "failed"
 	AttentionWarnings        AttentionKind = "warnings"
+	AttentionOutsideChanges  AttentionKind = "outside_changes"
 )
 
 type Attention struct {
@@ -326,7 +327,9 @@ func (index *SummaryIndex) Summarize(st State, now time.Time) JobSummary {
 		if !acknowledged && st.Status == StatusFailed {
 			row.Attention = append(row.Attention, Attention{AttentionFailed, "Job failed"})
 		}
-		if !acknowledged && actionableWarnings(result) > 0 {
+		if !acknowledged && len(result.OutsideChanges) > 0 {
+			row.Attention = append(row.Attention, Attention{AttentionOutsideChanges, fmt.Sprintf("%d file(s) outside the workspace changed during the job", len(result.OutsideChanges))})
+		} else if !acknowledged && actionableWarnings(result) > 0 {
 			row.Attention = append(row.Attention, Attention{AttentionWarnings, "Result contains warnings"})
 		}
 	}

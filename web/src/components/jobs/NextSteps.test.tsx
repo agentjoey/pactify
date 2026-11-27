@@ -23,6 +23,7 @@ it("offers dismiss only for unacknowledged terminal failures/warnings with any w
     const worktree = state ? {path:"/wt",baseCommit:"abc",status:state} : undefined;
     expect(commands({status:"failed", actions:[], worktree, attention:[{kind:"failed",message:"Failed"}]})).toContain("pactify sub dismiss job-123");
     expect(commands({status:"failed", actions:[], worktree, dismissedAt:"2026-10-20", attention:[]})).not.toContain("pactify sub dismiss job-123");
+    expect(commands({status:"succeeded", actions:[], worktree, attention:[{kind:"outside_changes",message:"Outside"}]})).toContain("pactify sub dismiss job-123");
   }
 });
 it("resumes without --worktree for jobs without a worktree and rejects unknown actions", () => {

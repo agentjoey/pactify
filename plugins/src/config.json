@@ -1,5 +1,5 @@
 {
-  "version": "0.8.0",
+  "version": "0.8.1",
   "minCLI": "0.15.0",
   "license": "FSL-1.1-MIT",
   "description": "Delegate coding tasks only on explicit user request to codex, kimi, opencode or agy, or explicitly to experimental dsh; review results and view job status.",

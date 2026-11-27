@@ -323,3 +323,13 @@ test("Dashboard cost failure does not hide KPIs or chart", async ({ page }) => {
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => localStorage.setItem("pactify-jobs-view", "list"));
 });
+
+test("job detail lists files changed outside the workspace", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/#/jobs/job-failed");
+  const section = page.getByRole("alert").filter({ hasText: "Changes outside the workspace" });
+  await expect(section).toBeVisible();
+  await expect(section.getByText("/workspace/pactify/.git/hooks/pre-commit")).toBeVisible();
+  await expect(section.getByText("/home/dev/.zshrc")).toBeVisible();
+  await section.screenshot({ path: "test-results/outside-changes.png" });
+});

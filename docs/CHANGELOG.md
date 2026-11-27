@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Jobs on harnesses without an OS sandbox (agy, kimi, opencode) now report files outside
+  the workspace that changed while the job ran: the repository's git hooks, config and
+  `info/`, and shell startup files, git config, `.ssh/` and launch agents in the user's
+  home. Changed paths appear in `outsideChanges` in the result, as a warning, as the
+  `outside_changes` attention kind in `pactify sub status`, and on the dashboard as an
+  "outside writes" status with a list in the job details. The check detects changes; it
+  does not prevent them. Claude Code plugin 0.8.1 teaches `/jobs` the new attention kind.
+
 ## v0.16.0 — 2026-11-27
 
 agy becomes a supported harness after passing the promotion gate on agy 1.5.18, with

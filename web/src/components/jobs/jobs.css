@@ -561,6 +561,23 @@
 .panel-section h2 {
   margin-bottom: 16px;
 }
+.panel-section.outside-changes {
+  border-color: var(--status-failure-line);
+}
+.outside-changes ul {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.outside-changes code {
+  overflow-wrap: anywhere;
+}
+.outside-change-kind {
+  color: var(--color-danger);
+  font-weight: 600;
+}
 .panel-caption {
   color: var(--color-text-3);
   font-size: 11px;

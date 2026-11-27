@@ -154,6 +154,7 @@ export function JobCard({
   ];
   const pillStatus = ["running", "retrying", "queued"].includes(job.status)
     ? job.status === "running" && job.retryAttempt ? `retrying (${job.retryAttempt}/${job.retryLimit})` : job.status
+    : job.attention.some(a => a.kind === "outside_changes") ? "outside writes"
     : job.failureClass === "quota" || job.attention.some(a => a.kind === "quota") ? "quota" : job.status === "failed" ? "failed"
     : job.attention.some(a => a.kind === "warnings") ? "warnings"
     : job.status === "succeeded" ? "done" : job.status;

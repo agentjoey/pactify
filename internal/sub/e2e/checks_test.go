@@ -32,6 +32,11 @@ func TestDeniedWritesStructuredEvidence(t *testing.T) {
 			`{"kind":"tool","raw":{"step_update":{"step_index":1,"tool_name":"run_command","state":"ERROR","tool_info":{"error":{"message":"Operation not permitted"}}}}}`,
 			`{"kind":"tool","raw":{"step_update":{"step_index":2,"tool_name":"write_to_file","state":"ERROR","tool_info":{"parameters":{"TargetFile":"/repo/denied-tool.txt"},"error":{"message":"denied by pre-tool hook"}}}}}`,
 		}},
+		{"agy", []string{
+			`{"kind":"tool","raw":{"step_update":{"step_index":1,"tool_name":"run_command","state":"ACTIVE","tool_info":{"parameters":{"CommandLine":"echo x > denied-shell.txt"}}}}}`,
+			`{"kind":"tool","raw":{"step_update":{"step_index":1,"tool_name":"run_command","state":"ERROR","tool_info":{"error":{"message":"Operation not permitted"}}}}}`,
+			`{"kind":"tool","raw":{"step_update":{"step_index":2,"tool_name":"write_file","state":"ERROR","tool_info":{"parameters":{"Path":"/repo/denied-tool.txt"},"error":{"type":"TOOL_ERROR","message":"tool call denied by pre-tool hook: Pactify read-only policy: writing tools are denied"}}}}}`,
+		}},
 		{"codex", []string{
 			`{"kind":"tool","raw":{"item":{"type":"commandExecution","command":"echo x > denied-shell.txt","exitCode":1,"aggregatedOutput":"Read-only file system"}}}`,
 			`{"kind":"tool","raw":{"item":{"type":"fileChange","status":"declined","changes":[{"path":"/repo/denied-tool.txt"}]}}}`,

@@ -38,6 +38,7 @@ func deniedWrites(harness string, rows [][]byte) (shell, file bool) {
 						Parameters struct {
 							Command string `json:"CommandLine"`
 							Target  string `json:"TargetFile"`
+							Path    string `json:"Path"`
 						} `json:"parameters"`
 						Error struct {
 							Message string `json:"message"`
@@ -82,11 +83,15 @@ func deniedWrites(harness string, rows [][]byte) (shell, file bool) {
 			if step.Info.Parameters.Target != "" {
 				targets[step.Index] = step.Info.Parameters.Target
 			}
+			// agy 1.5.18 renamed its file tools and their TargetFile parameter to Path.
+			if step.Info.Parameters.Path != "" {
+				targets[step.Index] = step.Info.Parameters.Path
+			}
 			if step.State != "ERROR" || !denialMessage(step.Info.Error.Message) {
 				continue
 			}
 			shell = shell || step.Name == "run_command" && strings.Contains(commands[step.Index], "echo x > denied-shell.txt")
-			file = file || (step.Name == "write_to_file" || step.Name == "replace_file_content") && filepath.Base(targets[step.Index]) == "denied-tool.txt"
+			file = file || (step.Name == "write_file" || step.Name == "edit_file" || step.Name == "write_to_file" || step.Name == "replace_file_content") && filepath.Base(targets[step.Index]) == "denied-tool.txt"
 		case "codex":
 			item := e.Raw.Item
 			shell = shell || item.Type == "commandExecution" && item.ExitCode != nil && *item.ExitCode != 0 && denialMessage(item.Output) && strings.Contains(item.Command, "echo x > denied-shell.txt")

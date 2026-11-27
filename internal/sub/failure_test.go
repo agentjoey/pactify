@@ -33,6 +33,7 @@ func TestFailureRegression(t *testing.T) {
 		{"codex", "git rev-parse HEAD: fatal: not a git repository", "other"},
 		{"agy", "Authentication expired. Please log back in.", "auth"},
 		{"agy", "agy token unavailable; run agy login first: missing", "auth"},
+		{"agy", "authentication failed or timed out", "auth"},
 		{"kimi", "acp: rpc error -32000: Authentication required", "auth"},
 		{"kimi", "internal: The provided authorization grant is invalid", "auth"},
 	} {

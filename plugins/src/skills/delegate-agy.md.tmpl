@@ -1,7 +1,6 @@
 ---
 name: delegate-agy
-description: Use only when the user explicitly asks to delegate {{if eq .Host "claude"}}via /delegate-agy or /pactify:delegate-agy{{else}}by explicitly invoking the delegate-agy skill{{end}}. Experimental harness; no OS sandbox; write permission requests are approved by pactify; results vary by model.{{if eq .Host "claude"}}
-disable-model-invocation: true{{end}}{{if ne .Host "claude"}}
+description: Use when the user explicitly asks to delegate a coding task to the agy harness. no OS sandbox; write permission requests are approved by pactify; results vary by model.{{if ne .Host "claude"}}
 license: {{.License}}
 compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'{{end}}
 ---
@@ -9,10 +8,10 @@ compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}) and git on macOS or Li
 <!-- Generated from plugins/src; do not edit. -->
 {{end}}
 {{include "fragments/prerequisites.md.tmpl"}}
-# Delegate to agy (experimental)
+# Delegate to agy
 
-**agy is experimental: no OS sandbox; write permission requests are approved by pactify;
-results vary by model.** Run only via {{command "delegate-agy"}}.
+**agy has no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Use only when the user explicitly requests delegation.
 Read-only permission requests are denied.
 Prefer the default codex harness (`/delegate` or `/delegate-codex`).
 

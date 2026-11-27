@@ -89,17 +89,17 @@ it("keeps harnesses visible when defaults fail", async () => {
   expect(screen.getByRole("alert")).toBeInTheDocument();
 });
 
-it("shows experimental labels only for agy and keeps kimi read-only unavailable", async () => {
+it("shows experimental labels only for dsh and keeps kimi read-only unavailable", async () => {
   const { harnesses, defaults } = fixture();
   await act(async () => {
     defaults.resolve(Response.json(snapshot));
-    harnesses.resolve(Response.json({ harnesses: ["codex", "kimi", "agy", "opencode"].map((name) => ({
-      ...harness, name, experimental: name === "agy", readOnly: name !== "kimi",
+    harnesses.resolve(Response.json({ harnesses: ["codex", "kimi", "agy", "opencode", "dsh"].map((name) => ({
+      ...harness, name, experimental: name === "dsh", readOnly: name !== "kimi",
     })) }));
   });
-  for (const name of ["codex", "kimi", "agy", "opencode"]) {
+  for (const name of ["codex", "kimi", "agy", "opencode", "dsh"]) {
     const card = within(screen.getByRole("article", { name }));
-    expect(card.queryByText("experimental") !== null).toBe(name === "agy");
+    expect(card.queryByText("experimental") !== null).toBe(name === "dsh");
     expect(card.getByText("Read-only:").parentElement).toHaveTextContent(
       name === "kimi" ? /^Read-only: Not supported$/ : /^Read-only: Supported$/,
     );

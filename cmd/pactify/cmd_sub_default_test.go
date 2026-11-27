@@ -92,7 +92,7 @@ func TestSubFallbackWarningsAndFailure(t *testing.T) {
 			}
 			want := "worker panic"
 			if name == "agy" {
-				want = name + " is experimental: no OS sandbox for writes; results vary by model; " + want
+				want = "agy has no OS sandbox for writes; " + want
 			}
 			if name == "opencode" {
 				want = "opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined; " + want

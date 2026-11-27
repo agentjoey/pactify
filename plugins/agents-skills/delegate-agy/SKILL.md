@@ -1,6 +1,6 @@
 ---
 name: delegate-agy
-description: Use only when the user explicitly asks to delegate by explicitly invoking the delegate-agy skill. Experimental harness; no OS sandbox; write permission requests are approved by pactify; results vary by model.
+description: Use when the user explicitly asks to delegate a coding task to the agy harness. no OS sandbox; write permission requests are approved by pactify; results vary by model.
 license: FSL-1.1-MIT
 compatibility: 'Requires the pactify CLI (>= 0.15.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
 ---
@@ -19,10 +19,10 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 
 The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
 
-# Delegate to agy (experimental)
+# Delegate to agy
 
-**agy is experimental: no OS sandbox; write permission requests are approved by pactify;
-results vary by model.** Run only via `/delegate-agy`.
+**agy has no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Use only when the user explicitly requests delegation.
 Read-only permission requests are denied.
 Prefer the default codex harness (`/delegate` or `/delegate-codex`).
 
@@ -41,7 +41,6 @@ Delegate only when the user explicitly asks: an explicit pactify skill invocatio
 or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
 If `PACTIFY_JOB` is set, you are already running inside a pactify job: do the task directly and
 never run `pactify sub run`; the CLI refuses it.
-agy runs only when the user explicitly invokes the delegate-agy skill; never select it on your own.
 Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route

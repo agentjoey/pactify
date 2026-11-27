@@ -110,17 +110,17 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy is slash-command only and supported skills document actual permission boundaries" {
+@test "supported agy and opencode skills are model-invocable and document actual permission boundaries" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 for name in ('agy', 'opencode'):
     skill = (root / 'skills' / f'delegate-{name}' / 'SKILL.md').read_text()
-    assert ('disable-model-invocation: true\n' in skill.split('---')[1]) == (name == 'agy'), name
+    assert 'disable-model-invocation' not in skill.split('---')[1], name
     for path in (root / 'skills' / f'delegate-{name}' / 'SKILL.md', root / 'agents' / f'sub-{name}.md', root / 'README.md'):
         text = path.read_text().lower()
         if path.name != 'README.md':
-            assert ('experimental' in text) == (name == 'agy'), path
+            assert 'experimental' not in text, path
         for term in ('no os sandbox', 'permission requests are approved by pactify', f'/delegate-{name}', 'only'):
             assert term in text, (path, term)
         if name == 'opencode':
@@ -396,7 +396,7 @@ text = (root / 'skills/delegate-agy/SKILL.md').read_text()
 original = (root / 'skills/delegate-kimi/SKILL.md').read_text()
 start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
 assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
-for term in ('name: delegate-agy', 'experimental', 'results vary by model', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
+for term in ('name: delegate-agy', 'no OS sandbox', 'results vary by model', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
     assert term in text, term
 agent = (root / 'agents/sub-agy.md').read_text()
 for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):
@@ -548,7 +548,7 @@ def shared(text):
     return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
 assert shared(skill) == shared(reference)
 assert 'agy and opencode run only' not in shared(skill)
-assert 'agy runs only' in shared(skill)
+assert 'agy runs only' not in shared(skill)
 for text in (skill, agent):
     assert 'experimental' not in text.lower()
     assert 'Run only via' not in text

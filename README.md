@@ -50,10 +50,9 @@ Use `/delegate` (or `/pactify:delegate`) for default codex delegation, or select
 `/delegate-codex`, `/delegate-kimi`, `/delegate-agy` or `/delegate-opencode`. `/jobs` (or `/pactify:jobs`) is read-only:
 `/jobs all` includes older jobs and `/jobs <id>` shows one job. Read the
 [plugin guide](plugins/pactify/README.md) for brief writing and result review.
-The plugin is for Claude Code only. Delegation requires an explicit user request;
-the experimental agy skill runs only through its slash command. The supported
-opencode skill, like kimi, can be invoked by the model only on an explicit user
-request to delegate.
+The plugin is for Claude Code only. Delegation requires an explicit user request:
+the kimi, opencode, agy and experimental dsh skills can be invoked by the model only
+on an explicit user request to delegate.
 
 ## Other hosts
 
@@ -121,7 +120,7 @@ server) inherits the marker; open a fresh terminal instead.
 Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
 [job status](docs/sub-status.md) and [cost reporting](docs/sub-cost.md).
 
-codex is the default; kimi and opencode are supported, and agy is experimental. Kimi read-only jobs use a
+codex is the default; kimi, opencode and agy are supported, and dsh is experimental. Kimi read-only jobs use a
 generated private config with an execution-time tool allowlist, snapshot verification
 for every agent, and a fail-closed repository baseline. Shell, writes, sub-agents,
 cron, MCP and network tools are unavailable. Use `kimi --read-only` for reviews;
@@ -142,7 +141,7 @@ permission checks are a guardrail, not isolation. Experimental harness results v
 | kimi | Supported |
 | opencode 1.x (`opencode-ai`) | Supported while `opencode-ai` still publishes 1.x releases and the v1 drift/contract check stays green |
 | opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.3.2) |
-| agy | Experimental |
+| agy | Supported |
 
 See [upstream compatibility](docs/harness-updates.md) for contract checks and evaluation gates.
 

@@ -75,7 +75,7 @@ Use `/pactify:delegate`, `/pactify:delegate-codex`, `/pactify:delegate-kimi`, `/
 Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate or hand off to a harness; otherwise do the work directly.
 Task size alone never authorizes delegation. Preserve the requested access mode; never raise permissions yourself.
 The codex, kimi and opencode skills are model-invocable for explicit delegation requests.
-The experimental agy skill sets `disable-model-invocation: true` and runs only via its slash command, including the namespaced form. The supported opencode skill, like kimi, is model-invocable only on an explicit user request to delegate.
+The supported agy and opencode skills, like kimi, are model-invocable only on an explicit user request to delegate.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
@@ -248,10 +248,10 @@ Run `pactify sub doctor kimi` to verify the managed links, a successful probe in
 that home, no probe entry in the user's index, and no `mcp.tools_discovered` event.
 The result's Harness line reports `kimi (minimal config)` or `kimi (user config)`.
 
-## agy (experimental)
+## agy
 
-agy is experimental: no OS sandbox; write permission requests are approved by pactify; results vary by model.
-Run only via `/delegate-agy` or `/pactify:delegate-agy`. Read-only permission requests are denied.
+agy has no OS sandbox; write permission requests are approved by pactify; results vary by model.
+Use only when the user explicitly requests delegation. Read-only permission requests are denied.
 The v2 adapter targets Antigravity CLI 1.4.0, with one persistent stream-json process
 per job. Every call explicitly supplies a model, defaulting to router settings or
 `gemini-3.8-flash-low`. Tokens come from step usage; result totals are cumulative.

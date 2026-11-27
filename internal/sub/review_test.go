@@ -211,7 +211,7 @@ func TestReviewFallbackWarningsFromRegistry(t *testing.T) {
 				result := readReviewResult(t, store, st.ID)
 				want := []string{st.Error}
 				if name == "agy" {
-					want = append([]string{name + " is experimental: no OS sandbox for writes; results vary by model"}, want...)
+					want = append([]string{"agy has no OS sandbox for writes"}, want...)
 				}
 				if name == "opencode" {
 					want = append([]string{"opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined"}, want...)

@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Current release: **v0.15.1**. See [CHANGELOG](CHANGELOG.md).
+> Current release: **v0.16.0**. See [CHANGELOG](CHANGELOG.md).
 
 Pactify is a local harness router. The CLI and Claude Code plugin delegate tasks
 to codex (default), kimi, opencode and agy, with experimental dsh support. Jobs,

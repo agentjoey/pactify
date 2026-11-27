@@ -38,7 +38,7 @@ func newSubDoctorCmd() *cobra.Command {
 		}
 		ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt)
 		defer stop()
-		passed, err := sub.Doctor(ctx, store, args, c.OutOrStdout(), sub.DoctorOptions{Model: model})
+		passed, err := sub.Doctor(ctx, store, args, c.OutOrStdout(), sub.DoctorOptions{Model: model, Progress: c.ErrOrStderr()})
 		code := 0
 		if !passed || err != nil {
 			code = 1

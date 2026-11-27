@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/sub"
 )
@@ -30,6 +31,7 @@ func TestSubAgyReadOnlyRestored(t *testing.T) {
 			installAgyV2CLI(t)
 			repo := gitRepoForCLI(t)
 			store, _ := sub.DefaultStore()
+			waitForJobWorkers(t, store)
 			st := resumeCLIJob(t, store, "old", repo, "agy", "sid", sub.StatusSucceeded, 1)
 			st.Request.Access = "read-only"
 			if err := store.Save(st); err != nil {
@@ -67,6 +69,34 @@ func TestSubAgyReadOnlyRestored(t *testing.T) {
 			}
 		})
 	}
+}
+
+// waitForJobWorkers registers a cleanup, run before the store's TempDir is
+// removed, that waits for detached job workers to exit. `sub run --wait`
+// returns as soon as the result exists, while the worker may still be writing.
+func waitForJobWorkers(t *testing.T, store sub.Store) {
+	t.Helper()
+	t.Cleanup(func() {
+		entries, _ := os.ReadDir(store.Root)
+		deadline := time.Now().Add(10 * time.Second)
+		for _, entry := range entries {
+			st, err := store.Load(entry.Name())
+			if err != nil || st.Worker == nil {
+				continue
+			}
+			for {
+				alive, err := st.Worker.Alive()
+				if err != nil || !alive {
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Errorf("job %s worker %d still running", st.ID, st.Worker.PID)
+					return
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+		}
+	})
 }
 
 func installAgyV2CLI(t *testing.T) {

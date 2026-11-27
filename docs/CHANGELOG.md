@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## v0.16.1 — 2026-11-27
+
+Jobs on harnesses without an OS sandbox now report changes to high-risk files outside the
+workspace, on the dashboard and in job results, with Claude Code plugin 0.8.1.
+
 - Jobs on harnesses without an OS sandbox (agy, kimi, opencode) now report files outside
   the workspace that changed while the job ran: the repository's git hooks, config and
   `info/`, and shell startup files, git config, `.ssh/` and launch agents in the user's

@@ -189,7 +189,7 @@ func doctorDeniedWrite(logPath, harness string) bool {
 		step := e.Raw.Step
 		lower := strings.ToLower(step.Info.Error.Message)
 		if harness == "agy-hook" {
-			if e.Kind == "tool" && step.Name == "write_to_file" && step.State == "ERROR" && strings.Contains(lower, "denied by pre-tool hook: pactify read-only policy") {
+			if e.Kind == "tool" && agyFileWriteTools[step.Name] && step.State == "ERROR" && strings.Contains(lower, "denied by pre-tool hook: pactify read-only policy") {
 				return true
 			}
 			continue
@@ -207,3 +207,7 @@ func doctorDeniedWrite(logPath, harness string) bool {
 func requiresReadOnlyBaseline(req Request) bool {
 	return (req.Harness == "opencode" || req.Harness == "agy" || req.Harness == "kimi") && req.Access == "read-only"
 }
+
+// agyFileWriteTools are agy's dedicated file-writing tools. agy 1.5.18 renamed
+// write_to_file and replace_file_content to write_file and edit_file.
+var agyFileWriteTools = map[string]bool{"write_file": true, "edit_file": true, "write_to_file": true, "replace_file_content": true}

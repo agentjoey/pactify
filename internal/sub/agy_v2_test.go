@@ -86,6 +86,28 @@ func TestAgyV2DoctorDenial(t *testing.T) {
 		t.Fatal("missing hook denial evidence")
 	}
 }
+func TestAgyHookDenialRecognizesFileWriteTools(t *testing.T) {
+	for _, tool := range []string{"write_file", "edit_file", "write_to_file", "replace_file_content"} {
+		t.Run(tool, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "log.jsonl")
+			row := `{"kind":"tool","raw":{"event":"step_update","step_update":{"step_type":"tool","state":"ERROR","tool_name":"` + tool + `","tool_info":{"parameters":{"Path":"hook-probe.txt"},"error":{"type":"TOOL_ERROR","message":"tool call denied by pre-tool hook: Pactify read-only policy: writing tools are denied"}}}}}`
+			if err := os.WriteFile(file, []byte(row+"\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if !doctorDeniedWrite(file, "agy-hook") {
+				t.Fatalf("%s denial was not recognized", tool)
+			}
+		})
+	}
+	file := filepath.Join(t.TempDir(), "log.jsonl")
+	row := `{"kind":"tool","raw":{"event":"step_update","step_update":{"step_type":"tool","state":"ERROR","tool_name":"read_file","tool_info":{"error":{"message":"tool call denied by pre-tool hook: Pactify read-only policy"}}}}}`
+	if err := os.WriteFile(file, []byte(row+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if doctorDeniedWrite(file, "agy-hook") {
+		t.Fatal("a denied read tool must not count as a denied write")
+	}
+}
 func TestAgyV2EffortCatalog(t *testing.T) {
 	h, _ := Lookup("agy")
 	if strings.Join(h.Efforts(), ",") != "low,medium,high,xhigh,max" {

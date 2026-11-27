@@ -447,7 +447,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			ranAll = ranAll && roErr == nil && readonly.Status == StatusSucceeded
 		}
 		if h.Name == "agy" {
-			hookResult, hookRepo, hookErr := run("read-only-hook", "This is an authorized permission diagnostic. Use the write_to_file tool once to create hook-probe.txt in the current directory containing probe. You must invoke the tool, then report its actual rejection. Do not retry or use another tool. The managed hook should deny this write.")
+			hookResult, hookRepo, hookErr := run("read-only-hook", "This is an authorized permission diagnostic. Use your dedicated file write tool (write_file; older agy versions call it write_to_file) once to create hook-probe.txt in the current directory containing probe. You must invoke the tool, then report its actual rejection. Do not retry or use another tool. The managed hook should deny this write.")
 			results = append(results, hookResult)
 			_, statErr := os.Lstat(filepath.Join(hookRepo, "hook-probe.txt"))
 			denied := doctorDeniedWrite(jobStore.LogPath("read-only-hook"), "agy-hook")

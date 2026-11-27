@@ -5,6 +5,10 @@
 - An agy job that cannot find a usable Google sign-in is now classified as an
   authentication failure. agy 1.5.18 reports `authentication failed or timed out`,
   which was classified as `other`, so the summary did not point to signing in again.
+- `pactify sub doctor agy` recognizes the read-only hook denial on agy 1.5.18, which
+  renamed its file tools to `write_file` and `edit_file`. The check looked only for the
+  old `write_to_file` name and reported the hook as inconclusive; the probe brief now
+  names the current tool.
 
 ## v0.15.1 — 2026-11-26
 

@@ -68,6 +68,10 @@ func (s *suite) newFixture(t *testing.T, auth bool) *fixture {
 			link(filepath.Join(s.user, ".local/share/opencode/auth.json"), "share/opencode/auth.json")
 		case "agy":
 			link(filepath.Join(s.user, ".gemini/antigravity-cli/antigravity-oauth-token"), "home/.gemini/antigravity-cli/antigravity-oauth-token")
+			// agy 1.5.15+ can keep its login in the macOS login keychain, which
+			// is found through HOME. Product jobs mirror the user's Library; the
+			// fixture links only the keychain directory, and only when it exists.
+			link(filepath.Join(s.user, "Library/Keychains"), "home/Library/Keychains")
 		case "kimi":
 			for _, n := range []string{"config.toml", "device_id", "credentials", "oauth"} {
 				if n == "oauth" {

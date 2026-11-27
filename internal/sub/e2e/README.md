@@ -71,7 +71,7 @@ uses the latter, because a free endpoint does not require authentication. No
 DeepSeek paid provider or other paid API channel is configured by the suite.
 
 Authentication uses metadata and managed symlinks only: codex `auth.json`,
-opencode 1.x `auth.json`, agy's OAuth login file, kimi `config.toml` and `device_id`,
+opencode 1.x `auth.json`, agy's OAuth login file (or, for a keyring login on macOS, the `Library/Keychains` directory), kimi `config.toml` and `device_id`,
 and kimi's **entire `credentials/` and `oauth/` directories**. Directory links
 preserve atomic refreshes and share kimi's interactive refresh lock. Kimi creates
 `oauth/` lazily; when absent, prepare creates the shared source directory as 0700

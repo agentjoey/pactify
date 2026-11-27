@@ -29,15 +29,21 @@ type DoctorReport struct {
 }
 
 type DoctorOptions struct {
-	Model string // Empty selects the harness's default doctor model.
+	Model    string    // Empty selects the harness's default doctor model.
+	Progress io.Writer // Receives one line before each slow step; nil discards them.
 }
+
+// doctorCanceled marks checks that did not finish because doctor was interrupted.
+const doctorCanceled = "CANCELED"
+
+const doctorInterruptedReason = "not completed: doctor was interrupted"
 
 func (r DoctorReport) Passed() bool {
 	if len(r.Checks) == 0 {
 		return false
 	}
 	for _, c := range r.Checks {
-		if c.Status == "FAIL" {
+		if c.Status == "FAIL" || c.Status == doctorCanceled {
 			return false
 		}
 	}
@@ -53,6 +59,7 @@ type doctorDeps struct {
 	now           func() time.Time
 	tempParent    string
 	model         string
+	progress      func(string)
 }
 
 // Doctor uses disposable repositories and job storage; only the verified-version
@@ -105,7 +112,15 @@ func Doctor(ctx context.Context, store Store, names []string, out io.Writer, opt
 	var reports []DoctorReport
 	var err error
 	if len(harnesses) > 0 {
-		reports, err = runDoctor(ctx, store, harnesses, doctorDeps{model: opts.Model})
+		progress := func(string) {}
+		if opts.Progress != nil {
+			progress = func(line string) { _, _ = fmt.Fprintln(opts.Progress, line) }
+		}
+		progress(fmt.Sprintf("Checking %d harness(es) with real model calls. Each check can take a few minutes and uses model quota.", len(harnesses)))
+		reports, err = runDoctor(ctx, store, harnesses, doctorDeps{model: opts.Model, progress: progress})
+		if err == nil && ctx.Err() != nil {
+			err = fmt.Errorf("doctor was interrupted; rerun pactify sub doctor to finish the checks")
+		}
 	} else if installedOnly {
 		err = fmt.Errorf("no harness CLI is installed on PATH. Install a harness CLI, then run pactify sub doctor <harness>")
 	}
@@ -139,6 +154,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 	if d.now == nil {
 		d.now = time.Now
 	}
+	if d.progress == nil {
+		d.progress = func(string) {}
+	}
 	if d.readonlyCheck == nil {
 		d.readonlyCheck = func(ctx context.Context, store Store, id string, result Result) error {
 			st, err := store.Load(id)
@@ -162,7 +180,23 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 	}
 	defer os.RemoveAll(root)
 	var reports []DoctorReport
+	// Every iteration appends exactly one report. When the context is canceled,
+	// the report in progress is marked interrupted and later harnesses are not run.
+	inProgress := -1
+	settle := func() {
+		if inProgress >= 0 && inProgress < len(reports) && ctx.Err() != nil {
+			reports[inProgress] = interruptedDoctorReport(reports[inProgress])
+		}
+		inProgress = -1
+	}
+	defer settle()
 	for _, h := range harnesses {
+		settle()
+		if ctx.Err() != nil {
+			reports = append(reports, DoctorReport{Harness: h.Name, Checks: []DoctorCheck{{"Doctor", doctorCanceled, "not run: doctor was interrupted"}}})
+			continue
+		}
+		inProgress = len(reports)
 		r := DoctorReport{Harness: h.Name}
 		add := func(name string, ok bool, reason string) {
 			status := "FAIL"
@@ -270,6 +304,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		// In particular, agy can proceed when its catalog pre-check is unavailable.
 		// Native defaults need no catalog lookup; opencode uses its configured default before heuristics.
 		if d.model == "" && h.Name != "codex" && h.Name != "kimi" && (h.DoctorModel == "" && model == "" || h.Name == "agy") && h.Models != nil {
+			d.progress(h.Name + ": listing models...")
 			opts := cockpit.StartOpts{Env: vendorenv.Strip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
@@ -354,6 +389,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			if _, err := jobStore.Create(id, Request{Harness: h.Name, Model: model, Access: mode, Cwd: repo, Brief: brief}); err != nil {
 				return Result{}, repo, err
 			}
+			d.progress(fmt.Sprintf("%s: checking %s (real model call; can take a few minutes)...", h.Name, doctorProbeLabel(access)))
 			jobCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			defer cancel()
 			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: DefaultReadOnlyToolCallLimit, CacheHome: filepath.Dir(store.Root), ProcessMarker: fmt.Sprintf("doctor-%x-%s", sha256.Sum256([]byte(jobStore.Root)), id), ReadOnlyPolicy: access == "read-only-hook"})
@@ -517,6 +553,31 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		reports = append(reports, r)
 	}
 	return reports, nil
+}
+
+func doctorProbeLabel(access string) string {
+	switch {
+	case access == "write":
+		return "write access"
+	case access == "read-only-hook":
+		return "the read-only hook"
+	default:
+		return "read-only access"
+	}
+}
+
+// interruptedDoctorReport keeps finished results and marks failed checks as
+// canceled: after an interrupt a failure says nothing about the harness.
+func interruptedDoctorReport(r DoctorReport) DoctorReport {
+	checks := make([]DoctorCheck, len(r.Checks))
+	for i, c := range r.Checks {
+		if c.Status == "FAIL" {
+			c.Status, c.Reason = doctorCanceled, doctorInterruptedReason
+		}
+		checks[i] = c
+	}
+	r.Checks = checks
+	return r
 }
 
 func doctorError(err error) string {

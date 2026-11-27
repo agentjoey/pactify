@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- `pactify sub doctor` prints a progress line to stderr before each step that waits on a
+  model. If doctor is interrupted, checks that had not finished show CANCELED instead of
+  FAIL, harnesses that had not started are not run, and doctor ends with a hint to rerun.
+- New `scripts/build-local.sh` rebuilds the dashboard, panel and binary from a checkout and,
+  on macOS, ad-hoc signs the binary so it can run as a background service.
+- Process cleanup waits up to two seconds after SIGKILL before reporting that a harness
+  process is still alive, so a busy machine no longer causes a false cleanup error.
+
 ## v0.16.1 — 2026-11-27
 
 Jobs on harnesses without an OS sandbox now report changes to high-risk files outside the

@@ -38,6 +38,13 @@ Each checked harness has ten aligned rows. PASS/FAIL record checked outcomes; SK
 not applicable or not run after a prerequisite failure; WARN describes a
 limitation. Storage diagnostics appear separately.
 
+Before each step that waits on a model, doctor prints a progress line to stderr,
+such as `codex: checking write access (real model call; can take a few minutes)...`.
+The report itself stays on stdout. If doctor is interrupted (Ctrl-C), checks that
+had not finished are reported as CANCELED rather than FAIL, harnesses that had not
+started show a single CANCELED row, no version is recorded as verified, and doctor
+exits 1 with a hint to rerun it.
+
 The read-only HTTP doctor snapshot is unchanged: `lastRun` remains null, and
 `harnesses` contains `name`, `installed`, `version` and `verifiedVersion`. It reads
 stored metadata and does not run probes. No JSON fields are added by the CLI's

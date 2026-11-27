@@ -227,7 +227,8 @@ See [Jobs dashboard](jobs-view.md) for deployment details.
 ## macOS background services
 
 Locally built binaries installed as macOS background services need ad-hoc signing:
-`codesign --force -s - ./pactify`. This applies to local service installations,
+`codesign --force -s - ./pactify`, or build with `scripts/build-local.sh`, which signs
+the binary for you. This applies to local service installations,
 not ordinary foreground use. Release installation and local builds are separate.
 
 See [installation](deployment.md) and [CHANGELOG](CHANGELOG.md).

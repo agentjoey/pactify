@@ -7,8 +7,13 @@ import (
 	"time"
 )
 
+// killWait bounds the wait after SIGKILL. The signal cannot be caught, so this
+// only runs out when the target is not scheduled in time, as on a loaded machine.
+const killWait = 2 * time.Second
+
 // TerminateDescendants sends TERM then KILL to a saved snapshot, checking birth
-// identity before every signal. Each wait is bounded by grace.
+// identity before every signal. The wait after TERM is bounded by grace; the wait
+// after KILL by the longer of grace and killWait.
 func TerminateDescendants(name string, descendants []Identity, grace time.Duration) error {
 	if len(descendants) == 0 {
 		return nil
@@ -26,7 +31,7 @@ func TerminateDescendants(name string, descendants []Identity, grace time.Durati
 			errs = append(errs, fmt.Errorf("kill %s descendant %d: %w", name, p.PID, err))
 		}
 	}
-	remaining, err = WaitDescendants(name, remaining, grace)
+	remaining, err = WaitDescendants(name, remaining, max(grace, killWait))
 	errs = append(errs, err)
 	for _, p := range remaining {
 		errs = append(errs, fmt.Errorf("%s descendant %d is still alive after SIGKILL", name, p.PID))

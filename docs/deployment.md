@@ -30,7 +30,9 @@ npm run dev
 The Vite proxy connects to `PACTIFY_SERVE_URL`, default
 `http://127.0.0.1:7777`, and rewrites Host and any Origin to the target.
 Rebuild the embedded dashboard and panel with `npm run build` and
-`npm run build:panel` before rebuilding the Go binary.
+`npm run build:panel` before rebuilding the Go binary. `scripts/build-local.sh`
+does all three and, on macOS, ad-hoc signs the result so it can run as a
+background service (`--no-web` skips the web build).
 
 ## Local server
 

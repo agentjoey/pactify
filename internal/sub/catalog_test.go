@@ -433,7 +433,7 @@ func TestHarnessCatalogPromotionAndAccess(t *testing.T) {
 				t.Fatal("missing harness")
 			}
 			row := c.harness(context.Background(), s, h, HarnessDefault{}, false)
-			if row.Experimental != (name == "agy" || name == "dsh") || !row.ReadOnly || row.Sandboxed != (name == "codex" || name == "dsh") {
+			if row.Experimental != (name == "dsh") || !row.ReadOnly || row.Sandboxed != (name == "codex" || name == "dsh") {
 				t.Fatalf("catalog promotion or access flags: %+v", row)
 			}
 		})

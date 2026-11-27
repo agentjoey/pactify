@@ -20,7 +20,7 @@ func TestDoctorDefaultInstalledOnly(t *testing.T) {
 	if got := strings.Count(out.String(), "SKIP Installed: not installed"); got != len(registry) {
 		t.Errorf("skip count=%d output=%s", got, out.String())
 	}
-	if !strings.Contains(out.String(), "agy (experimental)") {
+	if !strings.Contains(out.String(), "dsh (experimental)") || strings.Contains(out.String(), "agy (experimental)") {
 		t.Errorf("missing experimental label: %s", out.String())
 	}
 }

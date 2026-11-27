@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- agy is now a supported harness. It passed the promotion gate on agy 1.5.18 with
+  `gemini-4-neon-high`: the live lifecycle and isolation suite (14 scenarios) and three
+  endurance tasks. Job summaries no longer call agy experimental and keep a plain
+  "agy has no OS sandbox for writes" note. The Claude Code plugin 0.8.0 lets the model
+  invoke the agy skill on an explicit request to delegate, like kimi and opencode;
+  previously it ran only through `/delegate-agy`. dsh remains experimental.
+
 - An agy job that cannot find a usable Google sign-in is now classified as an
   authentication failure. agy 1.5.18 reports `authentication failed or timed out`,
   which was classified as `other`, so the summary did not point to signing in again.

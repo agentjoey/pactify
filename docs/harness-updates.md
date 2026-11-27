@@ -14,7 +14,7 @@ a package's `latest` tag alone does not reveal a migration to a new package.
 | opencode | npm `opencode-ai` (1.x), `@opencode/cli` (2.x) | `versions.json`: 1.19.0 / 2.3.2 | `opencode-api.yml`: pinned and latest OpenAPI contracts for both channels |
 | agy | Installer manifest | `versions.json` | `harness-drift.yml`: arguments and stream events |
 
-Opencode is supported on both majors; agy remains experimental. Opencode 1.x
+Opencode is supported on both majors, and agy is supported. Opencode 1.x
 stays supported while `opencode-ai` still publishes 1.x releases and the v1
 drift/contract check stays green. Opencode 2.x is pinned by the reviewed contract
 (currently 2.3.2), with pinned and latest probes checking consumed fields. A new
@@ -84,7 +84,8 @@ out of committed evidence.
 Promotion of both opencode majors follows gate-2 doctor, lifecycle/isolation E2E
 and endurance task runs. Continue using these gates for adapter changes; the
 [parallel scenario](../internal/sub/e2e/README.md) tests isolation independently
-of a model's choice of trailing newline. Agy remains experimental.
+of a model's choice of trailing newline. Agy passed the same gate-2 runs on agy 1.5.18
+with `gemini-4-neon-high`.
 
 Opencode has no OS sandbox. Write permission requests are approved by pactify;
 file tools have a directory guard for the job workspace, job TMPDIR and Pactify

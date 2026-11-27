@@ -328,8 +328,8 @@ func TestBriefSummarySkipsSharedPreambleSections(t *testing.T) {
 }
 
 func TestActionableWarningsIgnoresInformationalNotes(t *testing.T) {
-	h, _ := Lookup("agy")
-	r := Result{Harness: "agy", Warnings: []string{h.Experimental, dirtyWorktreeWarning, "agy 2.2.0 has not been checked; run pactify sub doctor first"}}
+	h, _ := Lookup("dsh")
+	r := Result{Harness: "dsh", Warnings: []string{h.Experimental, dirtyWorktreeWarning, "dsh 9.9.0 has not been checked; run pactify sub doctor first"}}
 	if n := actionableWarnings(r); n != 0 {
 		t.Fatalf("informational warnings counted: %d", n)
 	}

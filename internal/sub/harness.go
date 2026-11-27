@@ -121,7 +121,7 @@ var registry = map[string]Harness{
 	"agy": {
 		ModelIncludesEffort: true,
 		TransientRetry:      true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,
-		Experimental: "agy is experimental: no OS sandbox for writes; results vary by model", MinimalConfig: true,
+		Warning: "agy has no OS sandbox for writes", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
 		Models: cockpit.AgyModels, EffortValues: []string{"low", "medium", "high", "xhigh", "max"},
 		// Default jobs hide sessions through the managed HOME. User config explicitly

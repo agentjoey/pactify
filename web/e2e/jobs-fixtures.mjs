@@ -144,7 +144,7 @@ export function createJobsAPI(writable = false) {
         installed: i !== 2,
         version: "1.0",
         verifiedVersion: i === 0 ? "0.9" : "1.0",
-        experimental: name === "agy",
+        experimental: name === "dsh",
         readOnly: name !== "kimi",
         default: {},
         models: {

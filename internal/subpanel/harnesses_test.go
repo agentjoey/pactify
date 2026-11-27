@@ -35,7 +35,7 @@ func TestHarnessesReadOnlyAPI(t *testing.T) {
 		if h.Installed || h.Version != "" || h.Models.Items == nil || len(h.Models.Items) != 0 || h.Models.Error == "" || h.Models.FetchedAt.IsZero() || h.Efforts == nil {
 			t.Fatal(h)
 		}
-		if h.Experimental != (h.Name == "agy" || h.Name == "dsh") || !h.ReadOnly || h.Sandboxed != (h.Name == "codex" || h.Name == "dsh") {
+		if h.Experimental != (h.Name == "dsh") || !h.ReadOnly || h.Sandboxed != (h.Name == "codex" || h.Name == "dsh") {
 			t.Fatalf("promotion or access flags: %+v", h)
 		}
 		if h.Name == "codex" && (h.Default.Model != "selected" || !h.ReadOnly || h.Experimental) {
